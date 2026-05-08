@@ -1,86 +1,104 @@
-# 日常戒烟记录
+# cold tools
 
-PWA + Capacitor iOS 版的戒烟、喝水、健康记录 App。
+一个原生 iOS 记录 App：戒烟 · 喝水 · 健康 · 上班 · 备忘。
 
-## 本地预览
+## 技术栈
 
-直接用浏览器打开 `index.html` 即可,或者用任何静态服务器:
+- SwiftUI + SwiftData (iOS 17+)
+- 图表：Swift Charts
+- 认证：LocalAuthentication (Face ID / Touch ID)
+- 通知：UserNotifications
+- 备份加密：CryptoKit (AES-GCM + PBKDF2-SHA256)
+- 工程生成：XcodeGen（CI 从 `project.yml` 生成 `.xcodeproj`）
 
-```bash
-npx serve .
-# 或 python -m http.server 8000
-```
+## 打包 IPA（零 Mac 方案）
 
-## 打包 iOS App（零 Mac 方案）
+流程：**GitHub 推代码 → GitHub Actions 云端编译 → 下载 ipa → 爱思助手签名 → 装机**
 
-用 GitHub Actions 云端编译,本地爱思助手签名。
+### 1. 推代码到 GitHub
 
-### 一、首次推送到 GitHub
+首次：
 
 ```bash
 git init
 git add .
-git commit -m "init"
-# 到 GitHub 新建一个仓库,比如叫 tx-quit-smoking
-git remote add origin https://github.com/你的用户名/tx-quit-smoking.git
+git commit -m "init cold tools"
 git branch -M main
+git remote add origin https://github.com/<you>/<repo>.git
 git push -u origin main
 ```
 
-### 二、触发云端编译
+以后每次：
 
-有两种方式:
-
-**方式 A：推送代码自动触发**（改了 app.js/html/css 会自动编）
 ```bash
 git add .
 git commit -m "update"
 git push
 ```
 
-**方式 B：手动触发**
-1. 打开 GitHub 仓库页面
-2. 点 **Actions** 标签页
-3. 左侧选 **Build iOS IPA (unsigned)**
-4. 右上角 **Run workflow** → 选 main 分支 → 点绿色按钮
+推送后 Actions 会自动编译。也可以去仓库 **Actions** → **Build iOS IPA (unsigned)** → **Run workflow** 手动触发。
 
-### 三、下载 ipa
+### 2. 下载 IPA
 
-编译完成后(约 5-10 分钟):
-1. Actions 页面点开那次运行
-2. 最下面 **Artifacts** 区块
-3. 下载 `tx-quit-smoking-unsigned-ipa.zip`
-4. 解压得到 `tx-quit-smoking-unsigned.ipa`
+Actions 运行结束后：
+1. 点进运行详情页
+2. 页面最底部 **Artifacts** → 下载 `ColdTools-unsigned-ipa`
+3. 解压得到 `ColdTools-unsigned.ipa`
 
-### 四、爱思助手签名安装
+### 3. 爱思助手签名安装
 
-1. Windows 上打开爱思助手
-2. iPhone 用数据线连接
+1. Windows 端打开爱思助手
+2. iPhone 数据线连接并信任设备
 3. 工具箱 → **IPA 签名**
 4. 添加刚下载的 `.ipa`
-5. **自签** → 输入 Apple ID 和密码(免费账号即可)
-6. 签名成功后点 **安装到设备**
-7. iPhone 上: 设置 → 通用 → VPN与设备管理 → 信任证书
+5. **自签名**（输入 Apple ID 和密码，免费账号即可）
+6. 签名成功 → **安装到设备**
+7. iPhone：**设置 → 通用 → VPN 与设备管理 → 信任证书**
+8. **设置 → 隐私与安全性 → 开发者模式 → 打开 → 重启手机**
 
-### 五、后续更新
+## 本地开发（可选）
 
-改完代码:
+需要 Mac。`xcodegen generate` 产生 Xcode 工程，然后用 Xcode 打开 `ColdTools.xcodeproj` 运行。
 
-```bash
-git add .
-git commit -m "update"
-git push
+## 目录
+
+```
+ColdTools/
+  ColdToolsApp.swift          # App 入口
+  Info.plist
+  Assets.xcassets/            # 颜色 / AppIcon（CI 生成）
+  Models/                     # SwiftData 模型
+  Stores/                     # 锁 / 通知等跨视图状态
+  Utils/                      # 格式化 / 加密 / 日期
+  Views/
+    RootView.swift            # TabView + 锁屏遮罩
+    LockScreen.swift          # Face ID + 密码解锁
+    DashboardView.swift       # 首页
+    QuitSmokingView.swift     # 戒烟
+    WaterView.swift           # 喝水
+    RecordsView.swift         # 记录(分段)
+    HealthRecordsView.swift
+    WorkRecordsView.swift
+    NotesView.swift
+    WeeklyReportView.swift
+    SettingsView.swift        # 设置
+    Components/               # 复用组件
+Scripts/
+  make_icon.py                # 生成 1024 AppIcon
+project.yml                   # XcodeGen 工程描述
+.github/workflows/build-ios.yml
 ```
 
-等几分钟 → 下载新 ipa → 爱思助手重新签名安装。数据不会丢。
+## 常见问题
 
-## 注意
+**Q: Actions 编译失败 "No such module 'XXX'"**  
+可能是 Xcode 版本切换失败。workflow 里默认用 Xcode 16。如果 runner 上没有 16，会 fallback 到默认 Xcode。检查日志里 `xcodebuild -version`。
 
-- 免费 Apple ID 签名的 App **7 天会过期**,过期后爱思助手重新签名安装即可,localStorage 数据保留。
-- 想要不过期,要么买 Apple 开发者账号(¥688/年,1 年证书),要么走 PWA 路线(添加到主屏幕)。
-- GitHub 公开仓库的 Actions macOS runner 每月 2000 分钟免费,私有仓库 200 分钟。这个项目每次编译约 5-8 分钟。
+**Q: 安装上去打开一下就退出**  
+确认 iPhone **开发者模式**已打开（设置 → 隐私与安全性 → 开发者模式），且在 **设备管理** 里信任了证书。
 
-## 其他文档
+**Q: 7 天后 App 闪退**  
+免费证书 7 天过期。重新下 ipa → 爱思助手重签安装。数据保留。
 
-- `BUILD-IOS.md` - 租云 Mac 手动打包的备用方案
-- `MIGRATION.md` - 迁移到原生 SwiftUI 的数据模型和字段说明
+**Q: 我想用自己的 App 名字或 Bundle ID**  
+改 `project.yml` 里的 `CFBundleDisplayName` 和 `PRODUCT_BUNDLE_IDENTIFIER`。
