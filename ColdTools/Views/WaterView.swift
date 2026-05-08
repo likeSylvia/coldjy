@@ -25,8 +25,11 @@ struct WaterView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .dismissKeyboardOnTap()
             .navigationTitle("喝水")
             .navigationBarTitleDisplayMode(.large)
+            .keyboardDoneToolbar()
         }
     }
 
@@ -111,58 +114,118 @@ struct WaterView: View {
 
     private var goalSettings: some View {
         SectionCard(title: "目标与提醒") {
-            VStack(spacing: 12) {
-                HStack {
+            VStack(spacing: 0) {
+                HStack(spacing: 12) {
                     Text("每日目标")
+                        .font(.subheadline)
                     Spacer()
-                    TextField("2000", value: Binding(get: { settings.waterGoalML }, set: { settings.waterGoalML = max(0, $0); try? context.save() }), format: .number)
+                    TextField("2000", value: Binding(
+                        get: { settings.waterGoalML },
+                        set: { settings.waterGoalML = max(0, $0); try? context.save() }
+                    ), format: .number)
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(.trailing)
-                        .frame(width: 90)
-                    Text("ml").foregroundStyle(.secondary)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(.blue)
+                        .monospacedDigit()
+                        .frame(maxWidth: 100)
+                    Text("ml")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                HStack {
+
+                Divider().padding(.vertical, 10)
+
+                HStack(spacing: 12) {
                     Text("提醒时段")
+                        .font(.subheadline)
                     Spacer()
-                    Stepper("\(settings.waterStartHour):00",
-                            value: Binding(get: { settings.waterStartHour }, set: { settings.waterStartHour = max(0, min(23, $0)); try? context.save(); Task { await NotificationScheduler.rescheduleWaterReminders(settings: settings) } }),
-                            in: 0...23)
+                    Text("\(settings.waterStartHour):00")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.blue)
+                        .monospacedDigit()
+                    Stepper("", value: Binding(
+                        get: { settings.waterStartHour },
+                        set: {
+                            settings.waterStartHour = max(0, min(23, $0))
+                            try? context.save()
+                            Task { await NotificationScheduler.rescheduleWaterReminders(settings: settings) }
+                        }
+                    ), in: 0...23)
+                        .labelsHidden()
                         .fixedSize()
                     Text("—")
-                    Stepper("\(settings.waterEndHour):00",
-                            value: Binding(get: { settings.waterEndHour }, set: { settings.waterEndHour = max(settings.waterStartHour, min(23, $0)); try? context.save(); Task { await NotificationScheduler.rescheduleWaterReminders(settings: settings) } }),
-                            in: 0...23)
+                        .foregroundStyle(.secondary)
+                    Text("\(settings.waterEndHour):00")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.blue)
+                        .monospacedDigit()
+                    Stepper("", value: Binding(
+                        get: { settings.waterEndHour },
+                        set: {
+                            settings.waterEndHour = max(settings.waterStartHour, min(23, $0))
+                            try? context.save()
+                            Task { await NotificationScheduler.rescheduleWaterReminders(settings: settings) }
+                        }
+                    ), in: 0...23)
+                        .labelsHidden()
                         .fixedSize()
                 }
-                HStack {
+
+                Divider().padding(.vertical, 10)
+
+                HStack(spacing: 12) {
                     Text("间隔")
+                        .font(.subheadline)
                     Spacer()
-                    Stepper("\(settings.waterIntervalMin) 分钟",
-                            value: Binding(get: { settings.waterIntervalMin }, set: { settings.waterIntervalMin = max(15, $0); try? context.save(); Task { await NotificationScheduler.rescheduleWaterReminders(settings: settings) } }),
-                            in: 15...180, step: 15)
+                    Text("\(settings.waterIntervalMin)")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(.blue)
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                        .animation(.snappy, value: settings.waterIntervalMin)
+                    Text("分钟")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Stepper("", value: Binding(
+                        get: { settings.waterIntervalMin },
+                        set: {
+                            settings.waterIntervalMin = max(15, $0)
+                            try? context.save()
+                            Task { await NotificationScheduler.rescheduleWaterReminders(settings: settings) }
+                        }
+                    ), in: 15...180, step: 15)
+                        .labelsHidden()
                         .fixedSize()
                 }
-                Toggle("开启系统通知提醒", isOn: Binding(get: { settings.waterRemindersEnabled }, set: { newValue in
-                    Task {
-                        if newValue {
-                            let granted = await NotificationScheduler.requestAuthorization()
-                            await MainActor.run {
-                                settings.waterRemindersEnabled = granted
+
+                Divider().padding(.vertical, 10)
+
+                Toggle("开启系统通知提醒", isOn: Binding(
+                    get: { settings.waterRemindersEnabled },
+                    set: { newValue in
+                        Task {
+                            if newValue {
+                                let granted = await NotificationScheduler.requestAuthorization()
+                                await MainActor.run {
+                                    settings.waterRemindersEnabled = granted
+                                    try? context.save()
+                                }
+                                if granted {
+                                    await NotificationScheduler.rescheduleWaterReminders(settings: settings)
+                                }
+                            } else {
+                                settings.waterRemindersEnabled = false
                                 try? context.save()
-                            }
-                            if granted {
                                 await NotificationScheduler.rescheduleWaterReminders(settings: settings)
                             }
-                        } else {
-                            settings.waterRemindersEnabled = false
-                            try? context.save()
-                            await NotificationScheduler.rescheduleWaterReminders(settings: settings)
                         }
                     }
-                }))
+                ))
                 .tint(.blue)
             }
         }
+    }
     }
 
     private var timelineCard: some View {

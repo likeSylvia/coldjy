@@ -4,14 +4,19 @@ import Charts
 
 struct DashboardView: View {
     @Binding var selectedTab: AppTab
+    @Binding var showCraving: Bool
+    @Binding var showBreathing: Bool
+
     @Environment(\.modelContext) private var context
     @Environment(LockStore.self) private var lock
+    @Environment(\.colorScheme) private var scheme
 
     @Query private var settingsList: [AppSettings]
     @Query(sort: \SmokingLog.at, order: .reverse) private var smokes: [SmokingLog]
     @Query(sort: \CravingLog.at, order: .reverse) private var cravings: [CravingLog]
     @Query(sort: \WaterLog.at, order: .reverse) private var waters: [WaterLog]
     @Query(sort: \MemoNote.createdAt, order: .reverse) private var notes: [MemoNote]
+    @Query private var markers: [UsageMarker]
 
     @State private var showTrigger = false
     @State private var tickerTick = 0
@@ -30,23 +35,67 @@ struct DashboardView: View {
         return max(0, Int(Date.now.timeIntervalSince(last.at)))
     }
 
-    private var reducedCount: Int { max(settings.baselineCigs - todaySmokes.count, 0) }
-    private var savedMoney: Double { Double(reducedCount) * settings.pricePerStick }
+    private var reducedTodayCount: Int {
+        max(settings.baselineCigs - todaySmokes.count, 0)
+    }
+    private var savedMoneyToday: Double {
+        Double(reducedTodayCount) * settings.pricePerStick
+    }
+
+    // 累计指标
+    private var totalUsageDays: Int {
+        guard let start = markers.first?.startedAt else { return 1 }
+        let days = Int(Date.now.timeIntervalSince(start) / 86400) + 1
+        return max(1, days)
+    }
+
+    private var totalReducedCigs: Int {
+        var out = 0
+        for offset in -60 ... 0 {
+            let d = DateKey.day(DateKey.daysAgo(offset))
+            let count = smokes.filter { $0.dayKey == d }.count
+            out += max(settings.baselineCigs - count, 0)
+        }
+        return out
+    }
+
+    private var totalSavedMoney: Double {
+        Double(totalReducedCigs) * settings.pricePerStick
+    }
+
+    private var currentStreak: Int {
+        let target = settings.targetCigs
+        var streak = 0
+        for offset in (0 ... -60).reversed() where offset <= 0 {
+            let d = DateKey.day(DateKey.daysAgo(offset))
+            let count = smokes.filter { $0.dayKey == d }.count
+            if offset == 0 && count == 0 && smokes.isEmpty { continue }
+            if count <= target { streak += 1 } else { break }
+        }
+        return streak
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
+                VStack(spacing: 16) {
                     timerHero
+                    panicButtons
                     quickActions
+                    MilestonesCard(
+                        totalDays: totalUsageDays,
+                        reducedCigs: totalReducedCigs,
+                        savedMoney: totalSavedMoney,
+                        currentStreak: currentStreak
+                    )
                     weekTrendCard
                     todayTimeline
+                    shortcutLinks
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
             }
             .scrollIndicators(.hidden)
-            .background(backgroundGradient)
             .navigationTitle("今天")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -61,12 +110,11 @@ struct DashboardView: View {
                 }
             }
             .sheet(isPresented: $showTrigger) {
-                TriggerPickerSheet { trigger in
-                    saveSmoke(trigger: trigger)
+                TriggerPickerSheet(context: context) { trigger, date in
+                    saveSmoke(trigger: trigger, at: date)
                 } onCancel: {}
-                    .presentationDetents([.medium])
+                    .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
-                    .presentationBackground(.ultraThinMaterial)
             }
             .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
                 tickerTick &+= 1
@@ -74,22 +122,10 @@ struct DashboardView: View {
         }
     }
 
-    private var backgroundGradient: some View {
-        LinearGradient(
-            colors: [
-                Color(.systemBackground),
-                Color.accentColor.opacity(0.04)
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
-    }
-
     // MARK: - Timer Hero
 
     private var timerHero: some View {
-        HStack(spacing: 20) {
+        HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("距上次吸烟")
                     .font(.footnote.weight(.medium))
@@ -100,7 +136,7 @@ struct DashboardView: View {
                     .foregroundStyle(.tint)
                     .contentTransition(.numericText())
                 Label {
-                    Text("比正常少 \(reducedCount) 根 · 省 \(Fmt.money(savedMoney))")
+                    Text("少 \(reducedTodayCount) 根 · 省 \(Fmt.money(savedMoneyToday))")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 } icon: {
@@ -117,7 +153,46 @@ struct DashboardView: View {
         }
         .padding(22)
         .glassEffect(.regular, in: .rect(cornerRadius: 24))
-        .shadow(color: .black.opacity(0.08), radius: 16, y: 4)
+        .shadow(color: .black.opacity(0.06), radius: 12, y: 3)
+    }
+
+    // MARK: - Panic Buttons
+
+    private var panicButtons: some View {
+        HStack(spacing: 10) {
+            Button {
+                Haptics.tap(.medium)
+                showCraving = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "timer")
+                    Text("烟瘾来了")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .foregroundStyle(.white)
+                .background {
+                    Capsule().fill(Color.orange.gradient)
+                        .shadow(color: .orange.opacity(0.3), radius: 6, y: 2)
+                }
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                Haptics.tap(.medium)
+                showBreathing = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "wind")
+                    Text("深呼吸")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .foregroundStyle(.primary)
+                .glassEffect(.regular, in: .capsule)
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     // MARK: - Quick Actions
@@ -176,6 +251,14 @@ struct DashboardView: View {
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 }
+                RuleMark(y: .value("目标", settings.targetCigs))
+                    .foregroundStyle(.secondary.opacity(0.5))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4]))
+                    .annotation(position: .topTrailing, alignment: .trailing) {
+                        Text("目标 \(settings.targetCigs)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
             }
             .chartXAxis {
                 AxisMarks(values: .stride(by: .day)) { _ in
@@ -186,8 +269,52 @@ struct DashboardView: View {
             .chartYAxis {
                 AxisMarks(position: .leading, values: .automatic(desiredCount: 3))
             }
-            .frame(height: 130)
+            .frame(height: 140)
         }
+    }
+
+    // MARK: - Shortcut links
+
+    private var shortcutLinks: some View {
+        VStack(spacing: 10) {
+            NavigationLink {
+                HealthRecoveryView()
+            } label: {
+                shortcutRow(icon: "heart.text.square.fill", tint: .pink, title: "身体恢复时间线", desc: "看身体一点点变好")
+            }
+            NavigationLink {
+                AchievementsView()
+            } label: {
+                shortcutRow(icon: "trophy.fill", tint: .orange, title: "成就徽章", desc: "解锁里程碑")
+            }
+            NavigationLink {
+                TriggerHeatmapView()
+            } label: {
+                shortcutRow(icon: "flame.fill", tint: .red, title: "诱因热图", desc: "看什么时候最容易想抽")
+            }
+        }
+    }
+
+    private func shortcutRow(icon: String, tint: Color, title: String, desc: String) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle().fill(tint.gradient.opacity(0.2))
+                    .frame(width: 40, height: 40)
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(tint)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                Text(desc).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(14)
+        .glassEffect(.regular, in: .rect(cornerRadius: 18))
     }
 
     // MARK: - Timeline
@@ -245,8 +372,8 @@ struct DashboardView: View {
 
     // MARK: - Actions
 
-    private func saveSmoke(trigger: String) {
-        let s = SmokingLog(at: .now, trigger: trigger)
+    private func saveSmoke(trigger: String, at date: Date) {
+        let s = SmokingLog(at: date, trigger: trigger)
         context.insert(s)
         try? context.save()
         Haptics.warning()

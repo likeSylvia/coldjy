@@ -17,6 +17,7 @@ struct ColdToolsApp: App {
                 MemoNote.self,
                 AppSettings.self,
                 UnlockedAchievement.self,
+                UsageMarker.self,
             ])
             let config = ModelConfiguration(
                 "ColdToolsDB",

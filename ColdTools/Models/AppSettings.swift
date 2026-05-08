@@ -43,6 +43,7 @@ final class AppSettings {
     // UI
     var useSystemAppearance: Bool
     var forceDarkMode: Bool
+    var themeRaw: String
 
     init() {
         self.baselineCigs = 20
@@ -62,6 +63,7 @@ final class AppSettings {
 
         self.useSystemAppearance = true
         self.forceDarkMode = false
+        self.themeRaw = "warmAmber"
     }
 
     var lockMode: LockMode {

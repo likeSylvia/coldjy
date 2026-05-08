@@ -5,6 +5,9 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Environment(LockStore.self) private var lock
+    @Environment(ThemeStore.self) private var themeStore
+    @Environment(\.colorScheme) private var scheme
+
     @Query private var settingsList: [AppSettings]
     @Query private var allSmokes: [SmokingLog]
     @Query private var allCravings: [CravingLog]
@@ -12,6 +15,7 @@ struct SettingsView: View {
     @Query private var allHealths: [HealthLog]
     @Query private var allWorks: [WorkLog]
     @Query private var allNotes: [MemoNote]
+    @Query private var markers: [UsageMarker]
 
     @State private var showPasscodeSheet = false
     @State private var showClearConfirm = false
@@ -29,88 +33,15 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    Picker("解锁方式", selection: Binding(get: { settings.lockMode }, set: { setLockMode($0) })) {
-                        ForEach(availableLockModes, id: \.self) { m in
-                            Text(m.displayName).tag(m)
-                        }
-                    }
-                    if needsPasscode {
-                        Button {
-                            showPasscodeSheet = true
-                        } label: {
-                            HStack {
-                                Label(settings.passcodeHash == nil ? "设置访问密码" : "修改访问密码", systemImage: "key.fill")
-                                Spacer()
-                                if settings.passcodeHash != nil {
-                                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                                }
-                            }
-                        }
-                    }
-                    Button {
-                        lock.lockNow(settings: settings)
-                    } label: {
-                        Label("立即锁定", systemImage: "lock.fill")
-                    }
-                    .disabled(settings.lockMode == .off)
-                } header: {
-                    Text("隐私锁")
-                } footer: {
-                    if !LockStore.isBiometryAvailable {
-                        Text("当前设备未检测到 Face ID 或 Touch ID，将仅提供密码锁。")
-                    }
-                }
-
-                Section("外观") {
-                    Toggle("跟随系统", isOn: Binding(get: { settings.useSystemAppearance }, set: { settings.useSystemAppearance = $0; try? context.save() }))
-                    if !settings.useSystemAppearance {
-                        Toggle("深色模式", isOn: Binding(get: { settings.forceDarkMode }, set: { settings.forceDarkMode = $0; try? context.save() }))
-                    }
-                }
-
-                Section("数据概览") {
-                    overviewRow(icon: "nosign", title: "吸烟", count: allSmokes.count, tint: .red)
-                    overviewRow(icon: "hand.raised", title: "忍住", count: allCravings.count, tint: .orange)
-                    overviewRow(icon: "drop.fill", title: "喝水", count: allWaters.count, tint: .blue)
-                    overviewRow(icon: "heart.text.square", title: "健康", count: allHealths.count, tint: .pink)
-                    overviewRow(icon: "briefcase", title: "上班", count: allWorks.count, tint: .purple)
-                    overviewRow(icon: "note.text", title: "备忘", count: allNotes.count, tint: .green)
-                }
-
-                Section("数据备份") {
-                    Button {
-                        showExportSheet = true
-                    } label: {
-                        Label("加密导出备份", systemImage: "square.and.arrow.up")
-                    }
-                    Button {
-                        showImportPicker = true
-                    } label: {
-                        Label("导入备份", systemImage: "square.and.arrow.down")
-                    }
-                }
-
-                Section {
-                    Button(role: .destructive) {
-                        showClearConfirm = true
-                    } label: {
-                        Label("清空全部数据", systemImage: "trash")
-                    }
-                } footer: {
-                    Text("清空后不可恢复，建议先导出加密备份。")
-                }
-
-                Section("关于") {
-                    HStack {
-                        Text("版本"); Spacer()
-                        Text(appVersionString).foregroundStyle(.secondary)
-                    }
-                }
+                appearanceSection
+                lockSection
+                dataOverviewSection
+                backupSection
+                dangerZone
+                aboutSection
             }
             .navigationTitle("设置")
             .navigationBarTitleDisplayMode(.large)
-            .preferredColorScheme(settings.useSystemAppearance ? nil : (settings.forceDarkMode ? .dark : .light))
             .alert("清空全部数据？", isPresented: $showClearConfirm) {
                 Button("取消", role: .cancel) {}
                 Button("清空", role: .destructive) { clearAll() }
@@ -146,6 +77,144 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Appearance
+
+    @ViewBuilder
+    private var appearanceSection: some View {
+        Section {
+            NavigationLink {
+                ThemePicker()
+            } label: {
+                HStack(spacing: 14) {
+                    Circle()
+                        .fill(themeStore.theme.light.gradient)
+                        .frame(width: 28, height: 28)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("主题色")
+                        Text(themeStore.theme.displayName)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Picker("外观", selection: Binding(
+                get: { themeStore.appearance },
+                set: { themeStore.setAppearance($0, settings: settings); try? context.save() }
+            )) {
+                ForEach(ThemeStore.AppearanceMode.allCases) { a in
+                    Text(a.displayName).tag(a)
+                }
+            }
+        } header: {
+            Text("外观")
+        }
+    }
+
+    // MARK: - Lock
+
+    @ViewBuilder
+    private var lockSection: some View {
+        Section {
+            Picker("解锁方式", selection: Binding(get: { settings.lockMode }, set: { setLockMode($0) })) {
+                ForEach(availableLockModes, id: \.self) { m in
+                    Text(m.displayName).tag(m)
+                }
+            }
+            if needsPasscode {
+                Button {
+                    showPasscodeSheet = true
+                } label: {
+                    HStack {
+                        Label(settings.passcodeHash == nil ? "设置访问密码" : "修改访问密码", systemImage: "key.fill")
+                        Spacer()
+                        if settings.passcodeHash != nil {
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                        }
+                    }
+                }
+            }
+            Button {
+                lock.lockNow(settings: settings)
+            } label: {
+                Label("立即锁定", systemImage: "lock.fill")
+            }
+            .disabled(settings.lockMode == .off)
+        } header: {
+            Text("隐私锁")
+        } footer: {
+            if !LockStore.isBiometryAvailable {
+                Text("当前设备未检测到 Face ID 或 Touch ID，将仅提供密码锁。")
+            }
+        }
+    }
+
+    // MARK: - Data overview
+
+    @ViewBuilder
+    private var dataOverviewSection: some View {
+        Section("数据概览") {
+            overviewRow(icon: "nosign", title: "吸烟", count: allSmokes.count, tint: .red)
+            overviewRow(icon: "hand.raised", title: "忍住", count: allCravings.count, tint: .orange)
+            overviewRow(icon: "drop.fill", title: "喝水", count: allWaters.count, tint: .blue)
+            overviewRow(icon: "heart.text.square", title: "健康", count: allHealths.count, tint: .pink)
+            overviewRow(icon: "briefcase", title: "上班", count: allWorks.count, tint: .purple)
+            overviewRow(icon: "note.text", title: "备忘", count: allNotes.count, tint: .green)
+
+            NavigationLink {
+                AchievementsView()
+            } label: {
+                Label("查看成就", systemImage: "trophy.fill")
+                    .foregroundStyle(.orange)
+            }
+        }
+    }
+
+    // MARK: - Backup
+
+    @ViewBuilder
+    private var backupSection: some View {
+        Section("数据备份") {
+            Button {
+                showExportSheet = true
+            } label: {
+                Label("加密导出备份", systemImage: "square.and.arrow.up")
+            }
+            Button {
+                showImportPicker = true
+            } label: {
+                Label("导入备份", systemImage: "square.and.arrow.down")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var dangerZone: some View {
+        Section {
+            Button(role: .destructive) {
+                showClearConfirm = true
+            } label: {
+                Label("清空全部数据", systemImage: "trash")
+            }
+        } footer: {
+            Text("清空后不可恢复，建议先导出加密备份。")
+        }
+    }
+
+    @ViewBuilder
+    private var aboutSection: some View {
+        Section("关于") {
+            HStack {
+                Text("版本"); Spacer()
+                Text(appVersionString).foregroundStyle(.secondary)
+            }
+            HStack {
+                Text("使用天数"); Spacer()
+                Text("\(usageDays) 天").foregroundStyle(.secondary).monospacedDigit()
+            }
+        }
+    }
+
     private var availableLockModes: [LockMode] {
         if LockStore.isBiometryAvailable {
             return LockMode.allCases
@@ -161,6 +230,11 @@ struct SettingsView: View {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
         let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
         return "\(v) (\(b))"
+    }
+
+    private var usageDays: Int {
+        guard let start = markers.first?.startedAt else { return 1 }
+        return max(1, Int(Date.now.timeIntervalSince(start) / 86400) + 1)
     }
 
     private func overviewRow(icon: String, title: String, count: Int, tint: Color) -> some View {
@@ -186,10 +260,8 @@ struct SettingsView: View {
             try? context.save()
             return
         }
-        // passcode / both 必须先有密码
         if settings.passcodeHash == nil {
             showPasscodeSheet = true
-            // 密码设置完成后, PasscodeSetupSheet 会根据 biometry 可用性把 lockMode 切到 both/passcode
             return
         }
         settings.lockModeRaw = mode.rawValue
@@ -206,8 +278,6 @@ struct SettingsView: View {
         try? context.save()
         Haptics.warning()
     }
-
-    // MARK: - Backup
 
     private func runExport() {
         guard exportPassword.count >= 6 else {
@@ -261,7 +331,6 @@ struct SettingsView: View {
     }
 
     private func apply(snapshot: BackupSnapshot) {
-        // 简单策略:按 id 去重合并
         let existingIds = Set(allSmokes.map(\.id))
         for row in snapshot.smokes where !existingIds.contains(row.id) {
             context.insert(SmokingLog(id: row.id, at: row.at, trigger: row.trigger, note: row.note))
@@ -286,7 +355,6 @@ struct SettingsView: View {
         for row in snapshot.notes where !existingNote.contains(row.id) {
             context.insert(MemoNote(id: row.id, createdAt: row.createdAt, title: row.title, content: row.content, tag: row.tag, remindAt: row.remindAt, pinned: row.pinned, done: row.done))
         }
-        // 设置
         settings.baselineCigs = snapshot.settings.baselineCigs
         settings.targetCigs = snapshot.settings.targetCigs
         settings.packPrice = snapshot.settings.packPrice
@@ -300,6 +368,66 @@ struct SettingsView: View {
         if settings.waterRemindersEnabled {
             Task { await NotificationScheduler.rescheduleWaterReminders(settings: settings) }
         }
+    }
+}
+
+// MARK: - Theme Picker
+
+struct ThemePicker: View {
+    @Environment(ThemeStore.self) private var themeStore
+    @Environment(\.modelContext) private var context
+    @Query private var settingsList: [AppSettings]
+    private var settings: AppSettings { settingsList.first ?? AppSettingsStore.current(in: context) }
+
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
+                ForEach(AppTheme.allCases) { t in
+                    Button {
+                        Haptics.selection()
+                        withAnimation(.smooth) {
+                            themeStore.setTheme(t, settings: settings)
+                            try? context.save()
+                        }
+                    } label: {
+                        VStack(spacing: 10) {
+                            ZStack {
+                                Circle()
+                                    .fill(t.light.gradient)
+                                    .frame(width: 60, height: 60)
+                                    .shadow(color: t.light.opacity(0.35), radius: 6, y: 2)
+                                if themeStore.theme == t {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 22, weight: .bold))
+                                        .foregroundStyle(.white)
+                                }
+                            }
+                            Text(t.displayName)
+                                .font(.subheadline.weight(.semibold))
+                            // 预览色条
+                            HStack(spacing: 4) {
+                                Capsule().fill(t.light).frame(width: 20, height: 6)
+                                Capsule().fill(t.dark).frame(width: 20, height: 6)
+                                Capsule().fill(t.accent2).frame(width: 20, height: 6)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .glassEffect(.regular, in: .rect(cornerRadius: 20))
+                        .overlay {
+                            if themeStore.theme == t {
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(t.light, lineWidth: 2)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(16)
+        }
+        .navigationTitle("主题色")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -336,6 +464,12 @@ struct PasscodeSetupSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("保存") { save() }.fontWeight(.semibold)
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完成") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }.fontWeight(.semibold)
+                }
             }
         }
     }
@@ -345,7 +479,6 @@ struct PasscodeSetupSheet: View {
         guard passcode == confirm else { error = "两次密码不一致"; Haptics.error(); return }
         lock.setPasscode(passcode, settings: settings)
         if settings.lockMode == .off || settings.lockMode == .biometric {
-            // 用户是从"需要密码"的入口过来,把默认切成 both 或 passcode
             settings.lockModeRaw = LockStore.isBiometryAvailable ? LockMode.both.rawValue : LockMode.passcode.rawValue
         }
         try? context.save()
@@ -379,6 +512,12 @@ struct ExportSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("导出") { onExport() }.fontWeight(.semibold).disabled(password.count < 6)
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完成") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }.fontWeight(.semibold)
+                }
             }
         }
     }
@@ -407,12 +546,16 @@ struct ImportSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("导入") { onImport() }.fontWeight(.semibold).disabled(password.isEmpty)
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完成") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }.fontWeight(.semibold)
+                }
             }
         }
     }
 }
-
-// MARK: - Share Sheet
 
 struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]

@@ -158,6 +158,12 @@ struct NoteEditorSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .topBarTrailing) { Button("保存") { save() }.fontWeight(.semibold).disabled(title.isEmpty && content.isEmpty) }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完成") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }.fontWeight(.semibold)
+                }
             }
             .onAppear { load() }
         }

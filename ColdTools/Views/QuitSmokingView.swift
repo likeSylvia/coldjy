@@ -2,12 +2,15 @@ import SwiftUI
 import SwiftData
 
 struct QuitSmokingView: View {
+    @Binding var showCraving: Bool
+
     @Environment(\.modelContext) private var context
     @Query private var settingsList: [AppSettings]
     @Query(sort: \SmokingLog.at, order: .reverse) private var smokes: [SmokingLog]
     @Query(sort: \CravingLog.at, order: .reverse) private var cravings: [CravingLog]
 
     @State private var showTrigger = false
+    @FocusState private var focusedField: String?
 
     private var settings: AppSettings { settingsList.first ?? AppSettingsStore.current(in: context) }
     private var todayKey: String { DateKey.day(.now) }
@@ -17,7 +20,6 @@ struct QuitSmokingView: View {
     private var reducedCount: Int { max(settings.baselineCigs - todaySmokes.count, 0) }
     private var savedMoney: Double { Double(reducedCount) * settings.pricePerStick }
 
-    // 诱因统计: 本周
     private struct TriggerCount: Identifiable {
         let id: String
         let count: Int
@@ -44,14 +46,17 @@ struct QuitSmokingView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .dismissKeyboardOnTap()
             .navigationTitle("戒烟")
             .navigationBarTitleDisplayMode(.large)
+            .keyboardDoneToolbar()
             .sheet(isPresented: $showTrigger) {
-                TriggerPickerSheet { trigger in
-                    addSmoke(trigger: trigger)
+                TriggerPickerSheet(context: context) { trigger, date in
+                    addSmoke(trigger: trigger, at: date)
                 } onCancel: {}
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
             }
         }
     }
@@ -65,24 +70,61 @@ struct QuitSmokingView: View {
     }
 
     private var actionRow: some View {
-        HStack(spacing: 10) {
-            Button {
-                showTrigger = true
-            } label: {
-                Label("记一根", systemImage: "plus.circle.fill")
-                    .frame(maxWidth: .infinity, minHeight: 44)
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                Button {
+                    showTrigger = true
+                } label: {
+                    Label("记一根", systemImage: "plus.circle.fill")
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .foregroundStyle(.white)
+                        .background {
+                            Capsule().fill(Color.red.gradient)
+                                .shadow(color: .red.opacity(0.25), radius: 6, y: 2)
+                        }
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    Haptics.success()
+                    let c = CravingLog(at: .now, resisted: true)
+                    context.insert(c); try? context.save()
+                } label: {
+                    Label("忍住了", systemImage: "hand.raised.fill")
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .foregroundStyle(.primary)
+                        .glassEffect(.regular, in: .capsule)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.borderedProminent)
 
             Button {
-                Haptics.success()
-                let c = CravingLog(at: .now, resisted: true)
-                context.insert(c); try? context.save()
+                Haptics.tap(.medium)
+                showCraving = true
             } label: {
-                Label("忍住了", systemImage: "hand.raised.fill")
-                    .frame(maxWidth: .infinity, minHeight: 44)
+                HStack(spacing: 10) {
+                    Image(systemName: "timer")
+                        .font(.title3)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("开始烟瘾计时器")
+                            .font(.subheadline.weight(.bold))
+                        Text("坚持 5 分钟，烟瘾会消退")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                }
+                .foregroundStyle(.white)
+                .padding(16)
+                .background {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color.orange.gradient)
+                        .shadow(color: .orange.opacity(0.3), radius: 8, y: 3)
+                }
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.plain)
         }
     }
 
@@ -100,7 +142,7 @@ struct QuitSmokingView: View {
                             GeometryReader { geo in
                                 ZStack(alignment: .leading) {
                                     Capsule().fill(Color(.tertiarySystemBackground))
-                                    Capsule().fill(Color.accentColor)
+                                    Capsule().fill(Color.accentColor.gradient)
                                         .frame(width: geo.size.width * CGFloat(item.count) / CGFloat(total))
                                 }
                             }
@@ -116,34 +158,91 @@ struct QuitSmokingView: View {
 
     private var settingsCard: some View {
         SectionCard(title: "减量设置") {
-            VStack(spacing: 12) {
-                HStack {
-                    Text("每天正常").frame(maxWidth: .infinity, alignment: .leading)
-                    Stepper(value: Binding(get: { settings.baselineCigs }, set: { settings.baselineCigs = $0; try? context.save() }), in: 0...80) {
-                        Text("\(settings.baselineCigs)").monospacedDigit()
-                    }
-                }
-                HStack {
-                    Text("今日目标").frame(maxWidth: .infinity, alignment: .leading)
-                    Stepper(value: Binding(get: { settings.targetCigs }, set: { settings.targetCigs = $0; try? context.save() }), in: 0...80) {
-                        Text("\(settings.targetCigs)").monospacedDigit()
-                    }
-                }
-                HStack {
-                    Text("每包价格").frame(maxWidth: .infinity, alignment: .leading)
-                    TextField("25", value: Binding(get: { settings.packPrice }, set: { settings.packPrice = $0; try? context.save() }), format: .number)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 120)
-                }
-                HStack {
-                    Text("每包根数").frame(maxWidth: .infinity, alignment: .leading)
-                    Stepper(value: Binding(get: { settings.sticksPerPack }, set: { settings.sticksPerPack = max(1, $0); try? context.save() }), in: 1...30) {
-                        Text("\(settings.sticksPerPack)").monospacedDigit()
-                    }
-                }
+            VStack(spacing: 0) {
+                stepperRow(
+                    label: "每天正常",
+                    unit: "根",
+                    tint: .red,
+                    value: Binding(
+                        get: { settings.baselineCigs },
+                        set: { settings.baselineCigs = $0; try? context.save() }
+                    ),
+                    range: 0...80
+                )
+                Divider().padding(.vertical, 8)
+                stepperRow(
+                    label: "今日目标",
+                    unit: "根",
+                    tint: .accentColor,
+                    value: Binding(
+                        get: { settings.targetCigs },
+                        set: { settings.targetCigs = $0; try? context.save() }
+                    ),
+                    range: 0...80
+                )
+                Divider().padding(.vertical, 8)
+                textRow(
+                    label: "每包价格",
+                    placeholder: "25",
+                    suffix: "元",
+                    tint: .blue,
+                    value: Binding(
+                        get: { settings.packPrice },
+                        set: { settings.packPrice = $0; try? context.save() }
+                    )
+                )
+                Divider().padding(.vertical, 8)
+                stepperRow(
+                    label: "每包根数",
+                    unit: "根",
+                    tint: .purple,
+                    value: Binding(
+                        get: { settings.sticksPerPack },
+                        set: { settings.sticksPerPack = max(1, $0); try? context.save() }
+                    ),
+                    range: 1...30
+                )
             }
-            .labelsHidden()
+        }
+    }
+
+    private func stepperRow(label: String, unit: String, tint: Color, value: Binding<Int>, range: ClosedRange<Int>) -> some View {
+        HStack(spacing: 12) {
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+            Spacer()
+            Text("\(value.wrappedValue)")
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(tint)
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .animation(.snappy, value: value.wrappedValue)
+            Text(unit)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Stepper("", value: value, in: range)
+                .labelsHidden()
+                .fixedSize()
+        }
+    }
+
+    private func textRow(label: String, placeholder: String, suffix: String, tint: Color, value: Binding<Double>) -> some View {
+        HStack(spacing: 12) {
+            Text(label)
+                .font(.subheadline)
+            Spacer()
+            TextField(placeholder, value: value, format: .number.precision(.fractionLength(0...2)))
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(tint)
+                .monospacedDigit()
+                .frame(maxWidth: 100)
+                .focused($focusedField, equals: label)
+            Text(suffix)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -160,7 +259,7 @@ struct QuitSmokingView: View {
                             Image(systemName: item.icon).foregroundStyle(item.tint).frame(width: 24)
                             Text(item.title).font(.subheadline)
                             Spacer()
-                            Text(Fmt.timeOfDay(item.at)).font(.caption).foregroundStyle(.secondary)
+                            Text(Fmt.timeOfDay(item.at)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
                         }
                         .padding(.vertical, 10)
                         .contextMenu {
@@ -170,7 +269,7 @@ struct QuitSmokingView: View {
                                 Label("删除", systemImage: "trash")
                             }
                         }
-                        if item.id != items.last?.id { Divider() }
+                        if item.id != items.last?.id { Divider().opacity(0.5) }
                     }
                 }
             }
@@ -201,8 +300,8 @@ struct QuitSmokingView: View {
         return out.sorted { $0.at > $1.at }
     }
 
-    private func addSmoke(trigger: String) {
-        let s = SmokingLog(at: .now, trigger: trigger)
+    private func addSmoke(trigger: String, at date: Date) {
+        let s = SmokingLog(at: date, trigger: trigger)
         context.insert(s); try? context.save()
         Haptics.warning()
     }
@@ -234,6 +333,6 @@ private struct MetricTile: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color(.secondarySystemBackground)))
+        .glassEffect(.regular, in: .rect(cornerRadius: 16))
     }
 }
