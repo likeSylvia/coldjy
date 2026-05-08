@@ -3,12 +3,18 @@ import SwiftData
 
 struct NotesView: View {
     @Environment(\.modelContext) private var context
-    @Query(sort: [SortDescriptor(\MemoNote.pinned, order: .reverse), SortDescriptor(\MemoNote.createdAt, order: .reverse)])
-    private var notes: [MemoNote]
+    @Query(sort: \MemoNote.createdAt, order: .reverse) private var rawNotes: [MemoNote]
 
     @State private var query: String = ""
     @State private var showEditor = false
     @State private var editing: MemoNote?
+
+    private var notes: [MemoNote] {
+        rawNotes.sorted { a, b in
+            if a.pinned != b.pinned { return a.pinned && !b.pinned }
+            return a.createdAt > b.createdAt
+        }
+    }
 
     private var filtered: [MemoNote] {
         guard !query.isEmpty else { return notes }

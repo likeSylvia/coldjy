@@ -11,7 +11,7 @@ struct TriggerPickerSheet: View {
         var name: String { id }
     }
 
-    static let options: [TriggerOption] = [
+    private static let options: [TriggerOption] = [
         TriggerOption(id: "饭后", icon: "fork.knife"),
         TriggerOption(id: "压力", icon: "bolt.fill"),
         TriggerOption(id: "无聊", icon: "face.smiling"),

@@ -26,17 +26,20 @@ struct RecordsView: View {
                 .padding(.top, 8)
                 .onChange(of: tab) { _, _ in Haptics.selection() }
 
-                Group {
-                    switch tab {
-                    case .health: HealthRecordsView()
-                    case .work: WorkRecordsView()
-                    case .notes: NotesView()
-                    case .report: WeeklyReportView()
-                    }
-                }
+                paneContent
             }
             .navigationTitle("记录")
             .navigationBarTitleDisplayMode(.large)
+        }
+    }
+
+    @ViewBuilder
+    private var paneContent: some View {
+        switch tab {
+        case .health: HealthRecordsView()
+        case .work: WorkRecordsView()
+        case .notes: NotesView()
+        case .report: WeeklyReportView()
         }
     }
 }

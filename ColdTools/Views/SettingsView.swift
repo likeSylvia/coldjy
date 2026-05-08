@@ -364,8 +364,10 @@ struct ExportSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("备份密码") {
+                Section {
                     SecureField("至少 6 位", text: $password)
+                } header: {
+                    Text("备份密码")
                 } footer: {
                     Text("导入时需要相同密码。请妥善保管，密码遗失将无法恢复数据。")
                 }
