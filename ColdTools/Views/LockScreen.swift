@@ -76,7 +76,7 @@ struct LockScreen: View {
 
                     Image(systemName: "lock.fill")
                         .font(.system(size: 42, weight: .semibold))
-                        .foregroundStyle(.tint.gradient)
+                        .foregroundStyle(.tint)
                         .symbolEffect(.bounce, value: attemptingBiometric)
                 }
 
