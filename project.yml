@@ -29,8 +29,6 @@ targets:
     platform: iOS
     sources:
       - path: ColdTools
-    resources:
-      - path: ColdTools/Assets.xcassets
     info:
       path: ColdTools/Info.plist
       properties:
@@ -38,8 +36,6 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSRequiresIPhoneOS: true
-        UILaunchScreen:
-          UIColorName: LaunchBackground
         UIRequiredDeviceCapabilities: [arm64]
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIViewControllerBasedStatusBarAppearance: true
@@ -50,4 +46,3 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.coldtools.app
         INFOPLIST_KEY_UIUserInterfaceStyle: Automatic
-        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
