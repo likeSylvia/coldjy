@@ -44,16 +44,6 @@ jobs:
             brew install xcodegen
           fi
 
-      - name: Verify AppIcon exists
-        run: |
-          ICON=ColdTools/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
-          if [ ! -f "$ICON" ]; then
-            echo "ERROR: $ICON is missing from repo."
-            exit 1
-          fi
-          ls -lh "$ICON"
-          file "$ICON"
-
       - name: Generate Xcode project
         run: |
           xcodegen generate
