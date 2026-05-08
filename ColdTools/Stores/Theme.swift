@@ -93,7 +93,16 @@ final class ThemeStore {
         }
     }
 
-    init(settings: AppSettings) {
+    init(theme: AppTheme = .warmAmber, appearance: AppearanceMode = .system) {
+        self.theme = theme
+        self.appearance = appearance
+    }
+
+    static func defaultStore() -> ThemeStore {
+        ThemeStore()
+    }
+
+    func applyFrom(settings: AppSettings) {
         self.theme = AppTheme(rawValue: settings.themeRaw) ?? .warmAmber
         if settings.useSystemAppearance {
             self.appearance = .system
@@ -121,7 +130,7 @@ final class ThemeStore {
         }
     }
 
-    /// 当前生效的主色（跟随系统时无法获取 scheme，使用 light 版本作为 fallback）
+    /// 当前生效的主色
     func tintColor(scheme: ColorScheme) -> Color {
         scheme == .dark ? theme.dark : theme.light
     }

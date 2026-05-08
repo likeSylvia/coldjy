@@ -7,12 +7,13 @@ struct RootView: View {
     @Environment(\.colorScheme) private var scheme
 
     @State private var lock = LockStore()
-    @State private var theme: ThemeStore?
+    @State private var theme = ThemeStore.defaultStore()
     @State private var selectedTab: AppTab = .dashboard
     @State private var cravingTimer = CravingTimer()
     @State private var showCravingSheet = false
     @State private var showBreathingSheet = false
     @State private var pendingAchievements: [Achievement] = []
+    @State private var hasBootstrapped = false
     @AppStorage(DefaultsKey.onboardingCompleted) private var onboardingDone = false
 
     @Query private var settingsList: [AppSettings]
@@ -22,62 +23,60 @@ struct RootView: View {
     @Query private var healths: [HealthLog]
     @Query private var unlocked: [UnlockedAchievement]
 
-    private var settings: AppSettings {
-        settingsList.first ?? AppSettingsStore.current(in: context)
+    private var settings: AppSettings? {
+        settingsList.first
     }
 
     var body: some View {
-        ZStack {
+        Group {
             if !onboardingDone {
                 OnboardingView(completed: Binding(
                     get: { onboardingDone },
                     set: { onboardingDone = $0 }
                 ))
-                .transition(.opacity)
-            } else if let theme {
-                mainTabs(theme: theme)
+            } else if hasBootstrapped, let settings {
+                ZStack {
+                    mainTabs(settings: settings)
 
-                // 顶部成就解锁横幅
-                if let first = pendingAchievements.first {
-                    VStack {
-                        AchievementUnlockBanner(achievement: first)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 6)
-                            .id(first.code)
-                        Spacer()
-                    }
-                    .onAppear {
-                        Task { @MainActor in
-                            try? await Task.sleep(for: .seconds(4))
-                            if !pendingAchievements.isEmpty {
-                                pendingAchievements.removeFirst()
+                    if let first = pendingAchievements.first {
+                        VStack {
+                            AchievementUnlockBanner(achievement: first)
+                                .padding(.horizontal, 16)
+                                .padding(.top, 6)
+                                .id(first.code)
+                            Spacer()
+                        }
+                        .onAppear {
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .seconds(4))
+                                if !pendingAchievements.isEmpty {
+                                    pendingAchievements.removeFirst()
+                                }
                             }
                         }
+                        .zIndex(5)
                     }
-                    .zIndex(5)
-                }
-            }
 
-            if lock.state == .locked && onboardingDone {
-                LockScreen(lock: lock, settings: settings)
-                    .transition(.opacity.combined(with: .scale(scale: 1.05)))
-                    .zIndex(10)
+                    if lock.state == .locked {
+                        LockScreen(lock: lock, settings: settings)
+                            .transition(.opacity.combined(with: .scale(scale: 1.05)))
+                            .zIndex(10)
+                    }
+                }
+            } else {
+                // 启动过场
+                ZStack {
+                    Color(.systemBackground).ignoresSafeArea()
+                    ProgressView().controlSize(.large)
+                }
             }
         }
         .environment(lock)
-        .task {
-            let current = AppSettingsStore.current(in: context)
-            _ = UsageMarkerStore.current(in: context)
-            if theme == nil {
-                theme = ThemeStore(settings: current)
-            }
-            lock.evaluateOnLaunch(settings: current)
-            if current.waterRemindersEnabled {
-                await NotificationScheduler.rescheduleWaterReminders(settings: current)
-            }
-            evaluateAchievements()
+        .task(id: onboardingDone) {
+            await bootstrap()
         }
         .onChange(of: scenePhase) { _, new in
+            guard hasBootstrapped, let settings else { return }
             switch new {
             case .background, .inactive:
                 lock.markBackgrounded()
@@ -94,8 +93,22 @@ struct RootView: View {
         .animation(.smooth(duration: 0.3), value: onboardingDone)
     }
 
+    private func bootstrap() async {
+        let current = AppSettingsStore.current(in: context)
+        _ = UsageMarkerStore.current(in: context)
+        theme.applyFrom(settings: current)
+        lock.evaluateOnLaunch(settings: current)
+        if current.waterRemindersEnabled {
+            await NotificationScheduler.rescheduleWaterReminders(settings: current)
+        }
+        await MainActor.run {
+            hasBootstrapped = true
+        }
+        evaluateAchievements()
+    }
+
     @ViewBuilder
-    private func mainTabs(theme: ThemeStore) -> some View {
+    private func mainTabs(settings: AppSettings) -> some View {
         TabView(selection: $selectedTab) {
             Tab("首页", systemImage: "house.fill", value: AppTab.dashboard) {
                 DashboardView(selectedTab: $selectedTab,
@@ -133,6 +146,7 @@ struct RootView: View {
     }
 
     private func evaluateAchievements() {
+        guard hasBootstrapped, let settings else { return }
         let ctx = AchievementContext(
             allSmokes: smokes,
             allCravings: cravings,

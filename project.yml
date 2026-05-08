@@ -42,8 +42,7 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIViewControllerBasedStatusBarAppearance: true
         UIStatusBarStyle: UIStatusBarStyleDefault
-        UILaunchScreen:
-          UIColorName: ""
+        UILaunchScreen: {}
         NSFaceIDUsageDescription: 使用 Face ID 保护你的记录隐私
         ITSAppUsesNonExemptEncryption: false
     settings:

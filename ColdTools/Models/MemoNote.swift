@@ -3,14 +3,14 @@ import SwiftData
 
 @Model
 final class MemoNote {
-    @Attribute(.unique) var id: UUID
-    var createdAt: Date
-    var title: String
-    var content: String
-    var tag: String
+    @Attribute(.unique) var id: UUID = UUID()
+    var createdAt: Date = Date.now
+    var title: String = ""
+    var content: String = ""
+    var tag: String = ""
     var remindAt: Date?
-    var pinned: Bool
-    var done: Bool
+    var pinned: Bool = false
+    var done: Bool = false
 
     init(id: UUID = UUID(),
          createdAt: Date = .now,
