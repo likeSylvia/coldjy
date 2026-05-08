@@ -44,11 +44,15 @@ jobs:
             brew install xcodegen
           fi
 
-      - name: Install Pillow (for icon generation)
-        run: python3 -m pip install --break-system-packages --quiet Pillow
-
-      - name: Generate AppIcon
-        run: python3 Scripts/make_icon.py
+      - name: Verify AppIcon exists
+        run: |
+          ICON=ColdTools/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
+          if [ ! -f "$ICON" ]; then
+            echo "ERROR: $ICON is missing from repo."
+            exit 1
+          fi
+          ls -lh "$ICON"
+          file "$ICON"
 
       - name: Generate Xcode project
         run: |
