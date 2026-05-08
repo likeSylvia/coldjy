@@ -413,6 +413,7 @@ struct ThemePicker: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 18)
+                        .contentShape(RoundedRectangle(cornerRadius: 20))
                         .glassEffect(.regular, in: .rect(cornerRadius: 20))
                         .overlay {
                             if themeStore.theme == t {
@@ -421,7 +422,7 @@ struct ThemePicker: View {
                             }
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleButtonStyle())
                 }
             }
             .padding(16)

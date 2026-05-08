@@ -7,8 +7,6 @@ struct QuickActionCard: View {
     let subtitle: String
     let action: () -> Void
 
-    @State private var pressed = false
-
     var body: some View {
         Button {
             Haptics.tap()
@@ -30,18 +28,26 @@ struct QuickActionCard: View {
                 Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
+            .contentShape(Rectangle())   // 整个卡片都可点
             .glassEffect(.regular, in: .rect(cornerRadius: 20))
         }
-        .buttonStyle(.plain)
-        .scaleEffect(pressed ? 0.96 : 1)
-        .animation(.spring(duration: 0.25), value: pressed)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in pressed = true }
-                .onEnded { _ in pressed = false }
-        )
+        .buttonStyle(PressScaleButtonStyle())
+    }
+}
+
+/// 按下时轻微缩放,但不会阻止滚动手势
+struct PressScaleButtonStyle: ButtonStyle {
+    var scale: CGFloat = 0.96
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? scale : 1)
+            .opacity(configuration.isPressed ? 0.9 : 1)
+            .animation(.spring(duration: 0.25), value: configuration.isPressed)
     }
 }

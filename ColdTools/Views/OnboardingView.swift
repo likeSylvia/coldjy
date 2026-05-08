@@ -47,13 +47,14 @@ struct OnboardingView: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity, minHeight: 56)
                         .foregroundStyle(.white)
+                        .contentShape(Capsule())
                         .background {
                             Capsule()
                                 .fill(selectedTheme.light.gradient)
                                 .shadow(color: selectedTheme.light.opacity(0.35), radius: 10, y: 4)
                         }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleButtonStyle())
                 .padding(.horizontal, 32)
                 .padding(.bottom, 40)
             }
@@ -153,6 +154,7 @@ struct OnboardingView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
+                        .contentShape(RoundedRectangle(cornerRadius: 18))
                         .glassEffect(.regular, in: .rect(cornerRadius: 18))
                         .overlay {
                             if selectedTheme == t {
@@ -161,7 +163,7 @@ struct OnboardingView: View {
                             }
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleButtonStyle())
                 }
             }
             .padding(.horizontal, 24)
@@ -225,10 +227,11 @@ struct OnboardingView: View {
                         Text("¥\(p)")
                             .font(.caption.weight(.semibold))
                             .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
+                            .padding(.vertical, 10)
+                            .contentShape(Capsule())
                             .glassEffect(.regular, in: .capsule)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleButtonStyle())
                 }
             }
 
@@ -264,7 +267,7 @@ struct OnboardingView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
-                            Spacer()
+                            Spacer(minLength: 0)
                             if waterGoal == item.0 {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(.blue)
@@ -272,6 +275,8 @@ struct OnboardingView: View {
                             }
                         }
                         .padding(14)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(RoundedRectangle(cornerRadius: 18))
                         .glassEffect(.regular, in: .rect(cornerRadius: 18))
                         .overlay {
                             if waterGoal == item.0 {
@@ -280,7 +285,7 @@ struct OnboardingView: View {
                             }
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleButtonStyle())
                 }
             }
             .padding(.horizontal, 24)
@@ -314,10 +319,11 @@ struct OnboardingView: View {
             } label: {
                 Image(systemName: "minus")
                     .font(.headline)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Circle())
                     .glassEffect(.regular, in: .circle)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleButtonStyle())
 
             Text("\(value.wrappedValue)")
                 .font(.system(size: 32, weight: .bold, design: .rounded))
@@ -335,10 +341,11 @@ struct OnboardingView: View {
             } label: {
                 Image(systemName: "plus")
                     .font(.headline)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Circle())
                     .glassEffect(.regular, in: .circle)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleButtonStyle())
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)

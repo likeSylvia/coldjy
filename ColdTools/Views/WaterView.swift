@@ -26,7 +26,6 @@ struct WaterView: View {
                 .padding(.vertical, 8)
             }
             .scrollDismissesKeyboard(.interactively)
-            .dismissKeyboardOnTap()
             .navigationTitle("喝水")
             .navigationBarTitleDisplayMode(.large)
             .keyboardDoneToolbar()
@@ -68,10 +67,11 @@ struct WaterView: View {
                     Text("\(amount)ml")
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 48)
-                        .background(RoundedRectangle(cornerRadius: 14).fill(Color.blue.opacity(0.1)))
                         .foregroundStyle(.blue)
+                        .contentShape(RoundedRectangle(cornerRadius: 14))
+                        .background(RoundedRectangle(cornerRadius: 14).fill(Color.blue.opacity(0.1)))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleButtonStyle())
             }
         }
     }
@@ -235,19 +235,20 @@ struct WaterView: View {
             } else {
                 VStack(spacing: 0) {
                     ForEach(todayWaters, id: \.id) { w in
-                        HStack {
-                            Image(systemName: "drop.fill").foregroundStyle(.blue).frame(width: 24)
-                            Text("\(w.amount)ml").font(.subheadline)
-                            Spacer()
-                            Text(Fmt.timeOfDay(w.at)).font(.caption).foregroundStyle(.secondary)
-                        }
-                        .padding(.vertical, 10)
-                        .contextMenu {
-                            Button(role: .destructive) {
+                        SwipeToDeleteRow(
+                            onDelete: {
                                 context.delete(w); try? context.save(); Haptics.tap()
-                            } label: { Label("删除", systemImage: "trash") }
+                            }
+                        ) {
+                            HStack {
+                                Image(systemName: "drop.fill").foregroundStyle(.blue).frame(width: 24)
+                                Text("\(w.amount)ml").font(.subheadline)
+                                Spacer()
+                                Text(Fmt.timeOfDay(w.at)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                            }
+                            .padding(.vertical, 10)
                         }
-                        if w.id != todayWaters.last?.id { Divider() }
+                        if w.id != todayWaters.last?.id { Divider().opacity(0.5) }
                     }
                 }
             }

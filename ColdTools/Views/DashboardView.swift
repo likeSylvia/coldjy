@@ -171,12 +171,13 @@ struct DashboardView: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: 48)
                 .foregroundStyle(.white)
+                .contentShape(Capsule())
                 .background {
                     Capsule().fill(Color.orange.gradient)
                         .shadow(color: .orange.opacity(0.3), radius: 6, y: 2)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleButtonStyle())
 
             Button {
                 Haptics.tap(.medium)
@@ -189,9 +190,10 @@ struct DashboardView: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: 48)
                 .foregroundStyle(.primary)
+                .contentShape(Capsule())
                 .glassEffect(.regular, in: .capsule)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleButtonStyle())
         }
     }
 
@@ -282,16 +284,19 @@ struct DashboardView: View {
             } label: {
                 shortcutRow(icon: "heart.text.square.fill", tint: .pink, title: "身体恢复时间线", desc: "看身体一点点变好")
             }
+            .buttonStyle(.plain)
             NavigationLink {
                 AchievementsView()
             } label: {
                 shortcutRow(icon: "trophy.fill", tint: .orange, title: "成就徽章", desc: "解锁里程碑")
             }
+            .buttonStyle(.plain)
             NavigationLink {
                 TriggerHeatmapView()
             } label: {
                 shortcutRow(icon: "flame.fill", tint: .red, title: "诱因热图", desc: "看什么时候最容易想抽")
             }
+            .buttonStyle(.plain)
         }
     }
 
@@ -308,12 +313,14 @@ struct DashboardView: View {
                 Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                 Text(desc).font(.caption).foregroundStyle(.secondary)
             }
-            Spacer()
+            Spacer(minLength: 0)
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.tertiary)
         }
         .padding(14)
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
         .glassEffect(.regular, in: .rect(cornerRadius: 18))
     }
 
@@ -328,8 +335,10 @@ struct DashboardView: View {
             } else {
                 VStack(spacing: 0) {
                     ForEach(items) { item in
-                        TimelineRow(item: item) { id in
-                            deleteItem(id: id, kind: item.kind)
+                        SwipeToDeleteRow(onDelete: {
+                            deleteItem(id: item.id, kind: item.kind)
+                        }) {
+                            timelineRowContent(item: item)
                         }
                         if item.id != items.last?.id {
                             Divider().opacity(0.5)
@@ -348,6 +357,32 @@ struct DashboardView: View {
         let at: Date
         let tint: Color
         let icon: String
+    }
+
+    @ViewBuilder
+    private func timelineRowContent(item: TimelineItem) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(item.tint.gradient.opacity(0.15))
+                    .frame(width: 38, height: 38)
+                Image(systemName: item.icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(item.tint)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.title)
+                    .font(.subheadline.weight(.medium))
+                Text(Fmt.timeOfDay(item.at))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+            Spacer()
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 4)
+        .background(Color(.secondarySystemBackground).opacity(0.01))
     }
 
     private func buildTodayTimeline() -> [TimelineItem] {
@@ -404,42 +439,5 @@ struct DashboardView: View {
         }
         try? context.save()
         Haptics.tap()
-    }
-}
-
-// MARK: - Private TimelineRow
-
-private struct TimelineRow: View {
-    let item: DashboardView.TimelineItem
-    let onDelete: (UUID) -> Void
-
-    var body: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(item.tint.gradient.opacity(0.15))
-                    .frame(width: 38, height: 38)
-                Image(systemName: item.icon)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(item.tint)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.title)
-                    .font(.subheadline.weight(.medium))
-                Text(Fmt.timeOfDay(item.at))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-            }
-            Spacer()
-        }
-        .padding(.vertical, 10)
-        .contextMenu {
-            Button(role: .destructive) {
-                onDelete(item.id)
-            } label: {
-                Label("删除", systemImage: "trash")
-            }
-        }
     }
 }

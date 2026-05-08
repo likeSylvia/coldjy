@@ -36,34 +36,46 @@ struct NotesView: View {
                 }
             } else {
                 ForEach(filtered) { note in
-                    Button { editing = note; showEditor = true } label: {
-                        NoteRow(note: note) {
-                            note.done.toggle(); try? context.save(); Haptics.tap()
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .swipeActions(edge: .leading) {
+                    NoteRow(note: note,
+                            onToggleDone: {
+                                note.done.toggle()
+                                try? context.save()
+                                Haptics.tap()
+                            },
+                            onTap: {
+                                editing = note
+                                showEditor = true
+                            })
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
                         Button {
-                            note.pinned.toggle(); try? context.save(); Haptics.selection()
+                            note.pinned.toggle()
+                            try? context.save()
+                            Haptics.selection()
                         } label: {
                             Label(note.pinned ? "取消置顶" : "置顶", systemImage: "pin.fill")
                         }
                         .tint(.orange)
                     }
-                }
-                .onDelete { offsets in
-                    let list = filtered
-                    for idx in offsets where list.indices.contains(idx) {
-                        context.delete(list[idx])
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            context.delete(note)
+                            try? context.save()
+                            Haptics.warning()
+                        } label: {
+                            Label("删除", systemImage: "trash")
+                        }
                     }
-                    try? context.save(); Haptics.tap()
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
         .searchable(text: $query, prompt: "搜索标题、内容、标签")
         .overlay(alignment: .bottomTrailing) {
-            Button { editing = nil; showEditor = true } label: {
+            Button {
+                editing = nil
+                showEditor = true
+            } label: {
                 Image(systemName: "plus")
                     .font(.title2.weight(.semibold))
                     .foregroundStyle(.white)
@@ -71,6 +83,7 @@ struct NotesView: View {
                     .background(Circle().fill(Color.accentColor))
                     .shadow(radius: 6, y: 3)
             }
+            .buttonStyle(.plain)
             .padding(24)
         }
         .sheet(isPresented: $showEditor) {
@@ -80,45 +93,62 @@ struct NotesView: View {
 }
 
 private struct NoteRow: View {
-    let note: MemoNote
+    @Bindable var note: MemoNote
     let onToggleDone: () -> Void
+    let onTap: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 12) {
+            // 勾选钮独立响应
             Button(action: onToggleDone) {
                 Image(systemName: note.done ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
                     .foregroundStyle(note.done ? Color.green : Color.secondary)
+                    .contentShape(Rectangle())
+                    .frame(width: 44, height: 44, alignment: .leading)
             }
             .buttonStyle(.plain)
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    if note.pinned { Image(systemName: "pin.fill").font(.caption).foregroundStyle(.orange) }
-                    Text(note.title)
-                        .font(.body.weight(.medium))
-                        .strikethrough(note.done, color: .secondary)
-                        .foregroundStyle(note.done ? .secondary : .primary)
-                }
-                if !note.content.isEmpty {
-                    Text(note.content)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-                HStack(spacing: 6) {
-                    Text(Fmt.dateTime(note.createdAt)).font(.caption2).foregroundStyle(.secondary)
-                    if !note.tag.isEmpty {
-                        Text("#\(note.tag)")
+            // 主体点击 -> 打开编辑
+            Button(action: onTap) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        if note.pinned {
+                            Image(systemName: "pin.fill")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                        Text(note.title)
+                            .font(.body.weight(.medium))
+                            .strikethrough(note.done, color: .secondary)
+                            .foregroundStyle(note.done ? .secondary : .primary)
+                    }
+                    if !note.content.isEmpty {
+                        Text(note.content)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    HStack(spacing: 6) {
+                        Text(Fmt.dateTime(note.createdAt))
                             .font(.caption2)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Capsule().fill(Color.accentColor.opacity(0.15)))
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(.secondary)
+                        if !note.tag.isEmpty {
+                            Text("#\(note.tag)")
+                                .font(.caption2)
+                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+                                .foregroundStyle(Color.accentColor)
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
     }
 }
 
@@ -157,7 +187,11 @@ struct NoteEditorSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button("取消") { dismiss() } }
-                ToolbarItem(placement: .topBarTrailing) { Button("保存") { save() }.fontWeight(.semibold).disabled(title.isEmpty && content.isEmpty) }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("保存") { save() }
+                        .fontWeight(.semibold)
+                        .disabled(title.isEmpty && content.isEmpty)
+                }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
                     Button("完成") {
@@ -198,11 +232,5 @@ struct NoteEditorSheet: View {
         try? context.save()
         Haptics.success()
         dismiss()
-    }
-}
-
-extension Array {
-    subscript(safe index: Int) -> Element? {
-        indices.contains(index) ? self[index] : nil
     }
 }

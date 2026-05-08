@@ -1,29 +1,21 @@
 import SwiftUI
 import UIKit
 
-/// 点击空白处或上滑收起键盘的 modifier
+/// 点空白收起键盘
 struct DismissKeyboardOnTap: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onTapGesture {
-                endEditing()
+                UIApplication.shared.sendAction(
+                    #selector(UIResponder.resignFirstResponder),
+                    to: nil, from: nil, for: nil
+                )
             }
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 20)
-                    .onChanged { _ in endEditing() }
-            )
-    }
-
-    private func endEditing() {
-        UIApplication.shared.sendAction(
-            #selector(UIResponder.resignFirstResponder),
-            to: nil, from: nil, for: nil
-        )
     }
 }
 
 extension View {
-    /// 让当前视图在点击空白 / 滚动时自动收键盘
+    /// 点空白收键盘 (不干扰滚动和按钮)
     func dismissKeyboardOnTap() -> some View {
         modifier(DismissKeyboardOnTap())
     }

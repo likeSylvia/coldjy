@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import ActivityKit
 
 @Observable
 final class CravingTimer {
@@ -10,10 +11,10 @@ final class CravingTimer {
     }
 
     private(set) var state: State = .idle
-    private(set) var tick: Int = 0   // 驱动 view 刷新
+    private(set) var tick: Int = 0
     private var timer: Timer?
+    private var activity: Activity<CravingAttributes>?
 
-    /// 推荐忍耐时间: 烟瘾通常 3-5 分钟消退,我们设 5 分钟为目标
     let targetDuration: TimeInterval = 5 * 60
 
     var currentElapsed: TimeInterval {
@@ -38,13 +39,17 @@ final class CravingTimer {
 
     func start() {
         timer?.invalidate()
-        state = .running(start: .now)
+        let now = Date.now
+        state = .running(start: now)
         tick = 0
         Haptics.tap(.medium)
+
+        // 启动灵动岛
+        startLiveActivity(startDate: now)
+
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             self?.tick &+= 1
             guard let self else { return }
-            // 到目标时震一下
             if case .running(let s) = self.state {
                 let elapsed = Date.now.timeIntervalSince(s)
                 if elapsed >= self.targetDuration && elapsed < self.targetDuration + 1 {
@@ -54,7 +59,6 @@ final class CravingTimer {
         }
     }
 
-    /// 用户主动标记"忍住了",返回持续时间
     @discardableResult
     func complete() -> TimeInterval {
         timer?.invalidate()
@@ -67,21 +71,62 @@ final class CravingTimer {
         }
         state = .finished(duration: duration)
         Haptics.success()
+        endLiveActivity(resisted: true)
         return duration
     }
 
-    /// 用户放弃,不做任何记录
     func cancel() {
         timer?.invalidate()
         timer = nil
         state = .idle
         Haptics.tap(.light)
+        endLiveActivity(resisted: false)
     }
 
-    /// 回到空闲态（用于 finished 之后展示完成,然后 view 关闭）
     func reset() {
         timer?.invalidate()
         timer = nil
         state = .idle
+        endLiveActivity(resisted: false)
+    }
+
+    // MARK: - Live Activity
+
+    private func startLiveActivity(startDate: Date) {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        let attributes = CravingAttributes(title: "烟瘾计时")
+        let content = ActivityContent(
+            state: CravingAttributes.ContentState(
+                startDate: startDate,
+                targetSeconds: Int(targetDuration),
+                resisted: false
+            ),
+            staleDate: startDate.addingTimeInterval(targetDuration + 60)
+        )
+        do {
+            activity = try Activity.request(
+                attributes: attributes,
+                content: content,
+                pushType: nil
+            )
+        } catch {
+            print("[CravingTimer] live activity start failed: \(error)")
+        }
+    }
+
+    private func endLiveActivity(resisted: Bool) {
+        guard let activity else { return }
+        Task {
+            let finalContent = ActivityContent(
+                state: CravingAttributes.ContentState(
+                    startDate: activity.content.state.startDate,
+                    targetSeconds: activity.content.state.targetSeconds,
+                    resisted: resisted
+                ),
+                staleDate: nil
+            )
+            await activity.end(finalContent, dismissalPolicy: .after(Date.now.addingTimeInterval(2)))
+        }
+        self.activity = nil
     }
 }

@@ -73,21 +73,30 @@ struct CravingTimerSheet: View {
                         .foregroundStyle(.secondary)
                     alternativeCard
                 } else if case .running = timer.state {
-                    HStack(spacing: 8) {
-                        Image(systemName: suggestedAlternative.icon)
-                            .foregroundStyle(.tint)
-                        Text("试试：\(suggestedAlternative.title)")
-                            .font(.subheadline.weight(.medium))
-                        Button {
-                            suggestedAlternative = Alternatives.random(excluding: suggestedAlternative.id)
-                            Haptics.tap()
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.caption)
+                    VStack(spacing: 8) {
+                        HStack(spacing: 8) {
+                            Image(systemName: suggestedAlternative.icon)
+                                .foregroundStyle(.tint)
+                            Text("试试：\(suggestedAlternative.title)")
+                                .font(.subheadline.weight(.medium))
+                            Button {
+                                suggestedAlternative = Alternatives.random(excluding: suggestedAlternative.id)
+                                Haptics.tap()
+                            } label: {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.caption)
+                                    .frame(width: 30, height: 30)
+                                    .contentShape(Circle())
+                            }
+                            .buttonStyle(.plain)
                         }
+                        .padding(12)
+                        .glassEffect(.regular, in: .capsule)
+
+                        Label("关掉也没事,灵动岛会继续帮你计时", systemImage: "bolt.horizontal.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
                     }
-                    .padding(12)
-                    .glassEffect(.regular, in: .capsule)
                 } else if case .finished = timer.state {
                     Text("太棒了，已自动记为「忍住一次」")
                         .font(.callout)
@@ -109,12 +118,13 @@ struct CravingTimerSheet: View {
                             .font(.headline)
                             .frame(maxWidth: .infinity, minHeight: 56)
                             .foregroundStyle(.white)
+                            .contentShape(Capsule())
                             .background {
                                 Capsule().fill(Color.accentColor.gradient)
                                     .shadow(color: .accentColor.opacity(0.3), radius: 10, y: 4)
                             }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleButtonStyle())
                 case .running:
                     Button {
                         dismiss()
@@ -123,9 +133,10 @@ struct CravingTimerSheet: View {
                             .font(.headline)
                             .frame(maxWidth: .infinity, minHeight: 56)
                             .foregroundStyle(.primary)
+                            .contentShape(Capsule())
                             .glassEffect(.regular, in: .capsule)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleButtonStyle())
 
                     Button {
                         let duration = timer.complete()
@@ -135,12 +146,13 @@ struct CravingTimerSheet: View {
                             .font(.headline)
                             .frame(maxWidth: .infinity, minHeight: 56)
                             .foregroundStyle(.white)
+                            .contentShape(Capsule())
                             .background {
                                 Capsule().fill(Color.green.gradient)
                                     .shadow(color: .green.opacity(0.3), radius: 10, y: 4)
                             }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleButtonStyle())
                 case .finished:
                     Button {
                         timer.reset()
@@ -150,11 +162,12 @@ struct CravingTimerSheet: View {
                             .font(.headline)
                             .frame(maxWidth: .infinity, minHeight: 56)
                             .foregroundStyle(.white)
+                            .contentShape(Capsule())
                             .background {
                                 Capsule().fill(Color.green.gradient)
                             }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleButtonStyle())
                 }
             }
             .padding(.horizontal, 24)
@@ -189,7 +202,7 @@ struct CravingTimerSheet: View {
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
-                Spacer()
+                Spacer(minLength: 0)
                 Button {
                     suggestedAlternative = Alternatives.random(excluding: suggestedAlternative.id)
                     Haptics.tap()
@@ -197,7 +210,10 @@ struct CravingTimerSheet: View {
                     Image(systemName: "arrow.clockwise.circle.fill")
                         .font(.title3)
                         .foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
                 }
+                .buttonStyle(.plain)
             }
             .padding(14)
             .glassEffect(.regular, in: .rect(cornerRadius: 18))

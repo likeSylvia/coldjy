@@ -18,16 +18,21 @@ struct HealthRecordsView: View {
                 }
             } else {
                 ForEach(logs) { log in
-                    Button {
-                        editing = log; showEditor = true
-                    } label: {
-                        HealthRow(log: log)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .onDelete { offsets in
-                    for idx in offsets { context.delete(logs[idx]) }
-                    try? context.save(); Haptics.tap()
+                    HealthRow(log: log)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            editing = log
+                            showEditor = true
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                context.delete(log)
+                                try? context.save()
+                                Haptics.warning()
+                            } label: {
+                                Label("删除", systemImage: "trash")
+                            }
+                        }
                 }
             }
         }
@@ -41,9 +46,11 @@ struct HealthRecordsView: View {
                     .font(.title2.weight(.semibold))
                     .foregroundStyle(.white)
                     .frame(width: 56, height: 56)
+                    .contentShape(Circle())
                     .background(Circle().fill(Color.accentColor))
                     .shadow(radius: 6, y: 3)
             }
+            .buttonStyle(.plain)
             .padding(24)
         }
         .sheet(isPresented: $showEditor) {

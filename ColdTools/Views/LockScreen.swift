@@ -134,13 +134,14 @@ struct LockScreen: View {
                             }
                             .frame(maxWidth: .infinity, minHeight: 56)
                             .foregroundStyle(.white)
+                            .contentShape(Capsule())
                             .background {
                                 Capsule()
                                     .fill(Color.accentColor.gradient)
                                     .shadow(color: .accentColor.opacity(0.3), radius: 12, y: 4)
                             }
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressScaleButtonStyle())
                         .disabled(attemptingBiometric)
                         .opacity(attemptingBiometric ? 0.6 : 1)
                     }
@@ -170,9 +171,10 @@ struct LockScreen: View {
                                     .font(.headline)
                                     .frame(maxWidth: .infinity, minHeight: 56)
                                     .foregroundStyle(.primary)
+                                    .contentShape(Capsule())
                                     .glassEffect(.regular, in: .capsule)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressScaleButtonStyle())
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
                     }

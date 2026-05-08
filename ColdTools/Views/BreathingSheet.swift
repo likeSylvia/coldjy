@@ -99,9 +99,11 @@ struct BreathingSheet: View {
                 Image(systemName: "xmark")
                     .font(.headline)
                     .foregroundStyle(.secondary)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Circle())
                     .glassEffect(.regular, in: .circle)
             }
+            .buttonStyle(.plain)
             Spacer()
             if case .idle = state {
                 Stepper("\(totalCycles) 轮", value: $totalCycles, in: 2...10)
@@ -145,11 +147,12 @@ struct BreathingSheet: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 56)
                     .foregroundStyle(.white)
+                    .contentShape(Capsule())
                     .background {
                         Capsule().fill(Color.accentColor.gradient)
                     }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleButtonStyle())
         case .running:
             Button {
                 stop()
@@ -158,9 +161,10 @@ struct BreathingSheet: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 56)
                     .foregroundStyle(.primary)
+                    .contentShape(Capsule())
                     .glassEffect(.regular, in: .capsule)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleButtonStyle())
         case .completed:
             Button {
                 dismiss()
@@ -169,11 +173,12 @@ struct BreathingSheet: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 56)
                     .foregroundStyle(.white)
+                    .contentShape(Capsule())
                     .background {
                         Capsule().fill(Color.green.gradient)
                     }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleButtonStyle())
         }
     }
 

@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "ColdTools/**"
+      - "ColdToolsWidget/**"
       - "project.yml"
       - ".github/workflows/build-ios.yml"
 
@@ -91,6 +92,13 @@ jobs:
           cp -R ColdTools.xcarchive/Products/Applications/ColdTools.app Payload/
           rm -rf Payload/ColdTools.app/_CodeSignature
           rm -rf Payload/ColdTools.app/embedded.mobileprovision
+          # 清理 widget extension 的签名
+          if [ -d "Payload/ColdTools.app/PlugIns" ]; then
+            for ext in Payload/ColdTools.app/PlugIns/*.appex; do
+              rm -rf "$ext/_CodeSignature"
+              rm -rf "$ext/embedded.mobileprovision"
+            done
+          fi
           zip -qr "${{ env.IPA_NAME }}" Payload
           ls -lh "${{ env.IPA_NAME }}"
 

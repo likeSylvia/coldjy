@@ -47,7 +47,6 @@ struct QuitSmokingView: View {
                 .padding(.vertical, 8)
             }
             .scrollDismissesKeyboard(.interactively)
-            .dismissKeyboardOnTap()
             .navigationTitle("戒烟")
             .navigationBarTitleDisplayMode(.large)
             .keyboardDoneToolbar()
@@ -78,12 +77,13 @@ struct QuitSmokingView: View {
                     Label("记一根", systemImage: "plus.circle.fill")
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .foregroundStyle(.white)
+                        .contentShape(Capsule())
                         .background {
                             Capsule().fill(Color.red.gradient)
                                 .shadow(color: .red.opacity(0.25), radius: 6, y: 2)
                         }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleButtonStyle())
 
                 Button {
                     Haptics.success()
@@ -93,9 +93,10 @@ struct QuitSmokingView: View {
                     Label("忍住了", systemImage: "hand.raised.fill")
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .foregroundStyle(.primary)
+                        .contentShape(Capsule())
                         .glassEffect(.regular, in: .capsule)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleButtonStyle())
             }
 
             Button {
@@ -112,19 +113,21 @@ struct QuitSmokingView: View {
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.85))
                     }
-                    Spacer()
+                    Spacer(minLength: 0)
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.bold))
                 }
                 .foregroundStyle(.white)
                 .padding(16)
+                .frame(maxWidth: .infinity)
+                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .background {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .fill(Color.orange.gradient)
                         .shadow(color: .orange.opacity(0.3), radius: 8, y: 3)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleButtonStyle())
         }
     }
 
@@ -255,19 +258,17 @@ struct QuitSmokingView: View {
             } else {
                 VStack(spacing: 0) {
                     ForEach(items, id: \.id) { item in
-                        HStack {
-                            Image(systemName: item.icon).foregroundStyle(item.tint).frame(width: 24)
-                            Text(item.title).font(.subheadline)
-                            Spacer()
-                            Text(Fmt.timeOfDay(item.at)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
-                        }
-                        .padding(.vertical, 10)
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                delete(item: item)
-                            } label: {
-                                Label("删除", systemImage: "trash")
+                        SwipeToDeleteRow(onDelete: { delete(item: item) }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: item.icon)
+                                    .foregroundStyle(item.tint)
+                                    .frame(width: 24)
+                                Text(item.title).font(.subheadline)
+                                Spacer()
+                                Text(Fmt.timeOfDay(item.at)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
                             }
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 4)
                         }
                         if item.id != items.last?.id { Divider().opacity(0.5) }
                     }

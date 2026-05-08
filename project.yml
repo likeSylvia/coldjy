@@ -11,8 +11,6 @@ settings:
   base:
     SWIFT_VERSION: "5.10"
     SWIFT_STRICT_CONCURRENCY: "minimal"
-    SWIFT_UPCOMING_FEATURE_ISOLATED_DEFAULT_VALUES: "NO"
-    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Manual
     CODE_SIGN_IDENTITY: ""
@@ -40,6 +38,8 @@ targets:
       - path: ColdTools
     resources:
       - path: ColdTools/Assets.xcassets
+    dependencies:
+      - target: ColdToolsWidget
     info:
       path: ColdTools/Info.plist
       properties:
@@ -53,6 +53,7 @@ targets:
         UIStatusBarStyle: UIStatusBarStyleDefault
         UILaunchScreen: {}
         NSFaceIDUsageDescription: 使用 Face ID 保护你的记录隐私
+        NSSupportsLiveActivities: true
         ITSAppUsesNonExemptEncryption: false
     settings:
       base:
@@ -60,3 +61,22 @@ targets:
         INFOPLIST_KEY_UIUserInterfaceStyle: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  ColdToolsWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ColdToolsWidget
+      - path: ColdTools/Shared
+    info:
+      path: ColdToolsWidget/Info.plist
+      properties:
+        CFBundleDisplayName: cold tools Widget
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.coldtools.app.widget
+        SKIP_INSTALL: "NO"
