@@ -3,7 +3,7 @@ import SwiftData
 
 @Model
 final class WaterLog {
-    @Attribute(.unique) var id: UUID = UUID()
+    var id: UUID = UUID()
     var at: Date = Date.now
     var amount: Int = 250
 

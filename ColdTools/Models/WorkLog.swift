@@ -13,7 +13,7 @@ enum WorkStatus: String, CaseIterable, Identifiable, Codable {
 
 @Model
 final class WorkLog {
-    @Attribute(.unique) var id: UUID = UUID()
+    var id: UUID = UUID()
     var createdAt: Date = Date.now
     var startAt: Date?
     var endAt: Date?

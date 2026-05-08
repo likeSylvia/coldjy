@@ -3,7 +3,7 @@ import SwiftData
 
 @Model
 final class SmokingLog {
-    @Attribute(.unique) var id: UUID = UUID()
+    var id: UUID = UUID()
     var at: Date = Date.now
     var trigger: String = ""
     var note: String = ""

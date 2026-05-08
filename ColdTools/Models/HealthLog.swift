@@ -31,7 +31,7 @@ enum Energy: String, CaseIterable, Identifiable, Codable {
 
 @Model
 final class HealthLog {
-    @Attribute(.unique) var id: UUID = UUID()
+    var id: UUID = UUID()
     var createdAt: Date = Date.now
     var weight: Double?
     var sleepHours: Double?

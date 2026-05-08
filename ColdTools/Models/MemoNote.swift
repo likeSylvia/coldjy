@@ -3,7 +3,7 @@ import SwiftData
 
 @Model
 final class MemoNote {
-    @Attribute(.unique) var id: UUID = UUID()
+    var id: UUID = UUID()
     var createdAt: Date = Date.now
     var title: String = ""
     var content: String = ""

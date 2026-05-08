@@ -59,7 +59,7 @@ final class AppSettings {
 
 @Model
 final class UnlockedAchievement {
-    @Attribute(.unique) var code: String = ""
+    var code: String = ""
     var unlockedAt: Date = Date.now
 
     init(code: String, unlockedAt: Date = .now) {
