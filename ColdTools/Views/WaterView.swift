@@ -226,7 +226,6 @@ struct WaterView: View {
             }
         }
     }
-    }
 
     private var timelineCard: some View {
         SectionCard(title: "今日记录") {

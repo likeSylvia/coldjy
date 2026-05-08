@@ -17,11 +17,17 @@ enum WeeklyInsightBuilder {
         let thisWeekKeys: [String] = (-6 ... 0).map { DateKey.day(DateKey.daysAgo($0)) }
         let lastWeekKeys: [String] = (-13 ... -7).map { DateKey.day(DateKey.daysAgo($0)) }
 
-        let thisSmoke = thisWeekKeys.reduce(0) { $0 + smokes.filter { s in s.dayKey == $1 }.count }
-        let lastSmoke = lastWeekKeys.reduce(0) { $0 + smokes.filter { s in s.dayKey == $1 }.count }
-        let thisResist = thisWeekKeys.reduce(0) { $0 + cravings.filter { c in c.dayKey == $1 }.count }
-        let waterTotal = thisWeekKeys.reduce(0) { sum, key in
-            sum + waters.filter { $0.dayKey == key }.reduce(0) { $0 + $1.amount }
+        let thisSmoke = thisWeekKeys.reduce(0) { acc, key in
+            acc + smokes.filter { $0.dayKey == key }.count
+        }
+        let lastSmoke = lastWeekKeys.reduce(0) { acc, key in
+            acc + smokes.filter { $0.dayKey == key }.count
+        }
+        let thisResist = thisWeekKeys.reduce(0) { acc, key in
+            acc + cravings.filter { $0.dayKey == key }.count
+        }
+        let waterTotal = thisWeekKeys.reduce(0) { acc, key in
+            acc + waters.filter { $0.dayKey == key }.reduce(0) { $0 + $1.amount }
         }
         let waterDaysOnTarget = thisWeekKeys.filter { key in
             waters.filter { $0.dayKey == key }.reduce(0) { $0 + $1.amount } >= settings.waterGoalML
