@@ -18,11 +18,17 @@ struct QuitSmokingView: View {
     private var savedMoney: Double { Double(reducedCount) * settings.pricePerStick }
 
     // 诱因统计: 本周
-    private var triggerStats: [(trigger: String, count: Int)] {
+    private struct TriggerCount: Identifiable {
+        let id: String
+        let count: Int
+        var trigger: String { id }
+    }
+
+    private var triggerStats: [TriggerCount] {
         let cutoff = DateKey.daysAgo(-6)
         let map = Dictionary(grouping: smokes.filter { $0.at >= cutoff && !$0.trigger.isEmpty }, by: \.trigger)
             .mapValues { $0.count }
-        return map.map { (trigger: $0.key, count: $0.value) }.sorted { $0.count > $1.count }
+        return map.map { TriggerCount(id: $0.key, count: $0.value) }.sorted { $0.count > $1.count }
     }
 
     var body: some View {
@@ -88,7 +94,7 @@ struct QuitSmokingView: View {
             } else {
                 let total = max(triggerStats.first?.count ?? 1, 1)
                 VStack(spacing: 8) {
-                    ForEach(triggerStats.prefix(6), id: \.trigger) { item in
+                    ForEach(triggerStats.prefix(6)) { item in
                         HStack {
                             Text(item.trigger).font(.subheadline).frame(width: 56, alignment: .leading)
                             GeometryReader { geo in

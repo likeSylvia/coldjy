@@ -1,9 +1,7 @@
 import Foundation
 import LocalAuthentication
 import Observation
-import SwiftData
 
-@MainActor
 @Observable
 final class LockStore {
     enum LockState {

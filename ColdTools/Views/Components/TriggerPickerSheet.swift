@@ -5,15 +5,21 @@ struct TriggerPickerSheet: View {
     let onCancel: () -> Void
     @Environment(\.dismiss) private var dismiss
 
-    static let triggers: [(String, String)] = [
-        ("饭后", "fork.knife"),
-        ("压力", "bolt.fill"),
-        ("无聊", "face.smiling"),
-        ("社交", "person.2.fill"),
-        ("习惯", "arrow.triangle.2.circlepath"),
-        ("情绪", "cloud.rain.fill"),
-        ("提神", "cup.and.saucer.fill"),
-        ("其他", "questionmark"),
+    private struct TriggerOption: Identifiable {
+        let id: String
+        let icon: String
+        var name: String { id }
+    }
+
+    static let options: [TriggerOption] = [
+        TriggerOption(id: "饭后", icon: "fork.knife"),
+        TriggerOption(id: "压力", icon: "bolt.fill"),
+        TriggerOption(id: "无聊", icon: "face.smiling"),
+        TriggerOption(id: "社交", icon: "person.2.fill"),
+        TriggerOption(id: "习惯", icon: "arrow.triangle.2.circlepath"),
+        TriggerOption(id: "情绪", icon: "cloud.rain.fill"),
+        TriggerOption(id: "提神", icon: "cup.and.saucer.fill"),
+        TriggerOption(id: "其他", icon: "questionmark"),
     ]
 
     var body: some View {
@@ -24,16 +30,16 @@ struct TriggerPickerSheet: View {
                     .padding(.top, 8)
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    ForEach(Self.triggers, id: \.0) { item in
+                    ForEach(Self.options) { item in
                         Button {
                             Haptics.tap()
-                            onSelect(item.0)
+                            onSelect(item.name)
                             dismiss()
                         } label: {
                             VStack(spacing: 6) {
-                                Image(systemName: item.1)
+                                Image(systemName: item.icon)
                                     .font(.title3)
-                                Text(item.0).font(.caption)
+                                Text(item.name).font(.caption)
                             }
                             .frame(maxWidth: .infinity, minHeight: 64)
                             .background(

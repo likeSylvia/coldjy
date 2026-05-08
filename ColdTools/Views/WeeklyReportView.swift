@@ -14,10 +14,30 @@ struct WeeklyReportView: View {
     private var thisWeekKeys: [String] { (-6...0).map { DateKey.day(DateKey.daysAgo($0)) } }
     private var lastWeekKeys: [String] { (-13 ... -7).map { DateKey.day(DateKey.daysAgo($0)) } }
 
-    private var thisWeekSmoke: Int { thisWeekKeys.reduce(0) { $0 + smokes.filter { s in s.dayKey == $1 }.count } }
-    private var lastWeekSmoke: Int { lastWeekKeys.reduce(0) { $0 + smokes.filter { s in s.dayKey == $1 }.count } }
-    private var thisWeekCraving: Int { thisWeekKeys.reduce(0) { $0 + cravings.filter { c in c.dayKey == $1 }.count } }
-    private var thisWeekWater: Int { thisWeekKeys.reduce(0) { sum, key in sum + waters.filter { $0.dayKey == key }.reduce(0) { $0 + $1.amount } } }
+    private var thisWeekSmoke: Int {
+        thisWeekKeys.reduce(0) { acc, key in
+            acc + smokes.filter { $0.dayKey == key }.count
+        }
+    }
+    private var lastWeekSmoke: Int {
+        lastWeekKeys.reduce(0) { acc, key in
+            acc + smokes.filter { $0.dayKey == key }.count
+        }
+    }
+    private var thisWeekCraving: Int {
+        thisWeekKeys.reduce(0) { acc, key in
+            acc + cravings.filter { $0.dayKey == key }.count
+        }
+    }
+    private var thisWeekWater: Int {
+        var total = 0
+        for key in thisWeekKeys {
+            for log in waters where log.dayKey == key {
+                total += log.amount
+            }
+        }
+        return total
+    }
 
     private var diff: Int { thisWeekSmoke - lastWeekSmoke }
     private var weekSaved: Double {
@@ -26,18 +46,26 @@ struct WeeklyReportView: View {
         return Double(saved) * settings.pricePerStick
     }
 
-    private var correlation: [(mood: Mood, avgPerDay: Double)] {
+    private struct MoodStat: Identifiable {
+        let id: Mood
+        let avgPerDay: Double
+        var mood: Mood { id }
+    }
+
+    private var correlation: [MoodStat] {
         var grouped: [Mood: [Int]] = [:]
         for h in healths {
             let day = h.dayKey
             let count = smokes.filter { $0.dayKey == day }.count
             grouped[h.mood, default: []].append(count)
         }
-        return Mood.allCases.map { m in
+        return Mood.allCases.compactMap { m -> MoodStat? in
             let values = grouped[m] ?? []
-            let avg = values.isEmpty ? 0 : Double(values.reduce(0, +)) / Double(values.count)
-            return (m, avg)
-        }.filter { $0.avgPerDay > 0 }
+            guard !values.isEmpty else { return nil }
+            let avg = Double(values.reduce(0, +)) / Double(values.count)
+            guard avg > 0 else { return nil }
+            return MoodStat(id: m, avgPerDay: avg)
+        }
     }
 
     var body: some View {
@@ -80,9 +108,9 @@ struct WeeklyReportView: View {
                         EmptyStateView(icon: "link.circle", text: "记录健康后查看关联")
                             .padding(.vertical, 16)
                     } else {
-                        let maxV = max(correlation.map(\.avgPerDay).max() ?? 1, 1)
+                        let maxV = max(correlation.map { $0.avgPerDay }.max() ?? 1, 1)
                         VStack(spacing: 8) {
-                            ForEach(correlation, id: \.mood) { item in
+                            ForEach(correlation) { item in
                                 HStack {
                                     Text("\(item.mood.emoji) \(item.mood.rawValue)").font(.subheadline).frame(width: 80, alignment: .leading)
                                     GeometryReader { geo in

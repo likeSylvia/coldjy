@@ -132,19 +132,25 @@ struct DashboardView: View {
 
     // MARK: - Week Trend
 
-    private var weekChartData: [(date: Date, count: Int)] {
+    private struct DayCount: Identifiable {
+        let id: String
+        let date: Date
+        let count: Int
+    }
+
+    private var weekChartData: [DayCount] {
         (-6...0).map { offset in
             let d = DateKey.daysAgo(offset)
             let key = DateKey.day(d)
             let count = smokes.filter { $0.dayKey == key }.count
-            return (d, count)
+            return DayCount(id: key, date: d, count: count)
         }
     }
 
     private var weekTrendCard: some View {
         SectionCard(title: "7 天趋势") {
             Chart {
-                ForEach(weekChartData, id: \.date) { item in
+                ForEach(weekChartData) { item in
                     BarMark(
                         x: .value("日期", item.date, unit: .day),
                         y: .value("根数", item.count)
@@ -188,7 +194,7 @@ struct DashboardView: View {
         }
     }
 
-    private struct TimelineItem: Identifiable {
+    fileprivate struct TimelineItem: Identifiable {
         enum Kind { case smoke, craving, water }
         let id: UUID
         let kind: Kind

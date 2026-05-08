@@ -14,8 +14,8 @@ jobs:
   build:
     name: Build unsigned IPA on macOS
     runs-on: macos-15
-
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       SCHEME: ColdTools
       PROJECT: ColdTools.xcodeproj
       IPA_NAME: ColdTools-unsigned.ipa
@@ -51,11 +51,18 @@ jobs:
         run: python3 Scripts/make_icon.py
 
       - name: Generate Xcode project
-        run: xcodegen generate
+        run: |
+          xcodegen generate
+          echo "=== Generated project structure ==="
+          ls -la ColdTools.xcodeproj/ || true
+
+      - name: List schemes
+        run: xcodebuild -project ColdTools.xcodeproj -list
 
       - name: Build archive (unsigned)
         run: |
           mkdir -p build
+          set -o pipefail
           xcodebuild \
             -project "${{ env.PROJECT }}" \
             -scheme "${{ env.SCHEME }}" \
@@ -67,7 +74,24 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
-            clean archive
+            clean archive 2>&1 | tee build/build.log
+
+      - name: Show errors if build failed
+        if: failure()
+        run: |
+          echo "=== Compilation errors ==="
+          grep -E "error:|warning:" build/build.log || true
+          echo ""
+          echo "=== Last 300 lines ==="
+          tail -n 300 build/build.log
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build/build.log
+          if-no-files-found: ignore
 
       - name: Package unsigned IPA
         run: |

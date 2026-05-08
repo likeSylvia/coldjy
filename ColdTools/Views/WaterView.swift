@@ -73,21 +73,27 @@ struct WaterView: View {
         }
     }
 
+    private struct DayAmount: Identifiable {
+        let id: String
+        let date: Date
+        let amount: Int
+    }
+
     private var weekChart: some View {
         SectionCard(title: "7 天喝水") {
-            let data: [(Date, Int)] = (-6...0).map { offset in
+            let data: [DayAmount] = (-6...0).map { offset in
                 let d = DateKey.daysAgo(offset)
                 let key = DateKey.day(d)
                 let amt = waters.filter { $0.dayKey == key }.reduce(0) { $0 + $1.amount }
-                return (d, amt)
+                return DayAmount(id: key, date: d, amount: amt)
             }
             Chart {
-                ForEach(data, id: \.0) { item in
+                ForEach(data) { item in
                     BarMark(
-                        x: .value("日期", item.0, unit: .day),
-                        y: .value("毫升", item.1)
+                        x: .value("日期", item.date, unit: .day),
+                        y: .value("毫升", item.amount)
                     )
-                    .foregroundStyle(item.1 >= settings.waterGoalML ? Color.green : Color.blue.opacity(0.6))
+                    .foregroundStyle(item.amount >= settings.waterGoalML ? Color.green : Color.blue.opacity(0.6))
                     .cornerRadius(4)
                 }
                 RuleMark(y: .value("目标", settings.waterGoalML))

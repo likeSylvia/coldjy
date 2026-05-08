@@ -46,8 +46,9 @@ struct NotesView: View {
                     }
                 }
                 .onDelete { offsets in
-                    for idx in offsets {
-                        if let n = filtered[safe: idx] { context.delete(n) }
+                    let list = filtered
+                    for idx in offsets where list.indices.contains(idx) {
+                        context.delete(list[idx])
                     }
                     try? context.save(); Haptics.tap()
                 }
