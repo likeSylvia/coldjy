@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head><title>Generate Icons</title></head>
+<body>
+<script>
+function generateIcon(size) {
+  const c = document.createElement("canvas");
+  c.width = size; c.height = size;
+  const ctx = c.getContext("2d");
+
+  // Background gradient
+  const grad = ctx.createLinearGradient(0, 0, size, size);
+  grad.addColorStop(0, "#007aff");
+  grad.addColorStop(1, "#5856d6");
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.roundRect(0, 0, size, size, size * 0.22);
+  ctx.fill();
+
+  // Inner glow
+  ctx.fillStyle = "rgba(255,255,255,0.15)";
+  ctx.beginPath();
+  ctx.ellipse(size/2, size*0.35, size*0.35, size*0.25, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Smoke-free symbol
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = size * 0.04;
+  ctx.lineCap = "round";
+
+  // Cigarette
+  const cx = size * 0.3, cy = size * 0.58, cw = size * 0.4, ch = size * 0.08;
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.beginPath();
+  ctx.roundRect(cx, cy - ch/2, cw, ch, ch/2);
+  ctx.fill();
+
+  // Cross line (no smoking)
+  ctx.beginPath();
+  ctx.moveTo(size * 0.25, size * 0.72);
+  ctx.lineTo(size * 0.75, size * 0.44);
+  ctx.stroke();
+
+  // Checkmark
+  ctx.lineWidth = size * 0.05;
+  ctx.strokeStyle = "#30d158";
+  ctx.beginPath();
+  ctx.moveTo(size * 0.55, size * 0.7);
+  ctx.lineTo(size * 0.65, size * 0.8);
+  ctx.lineTo(size * 0.8, size * 0.6);
+  ctx.stroke();
+
+  return c.toDataURL("image/png");
+}
+
+[192, 512].forEach(size => {
+  const link = document.createElement("a");
+  link.download = `icon-${size}.png`;
+  link.href = generateIcon(size);
+  link.textContent = `Download icon-${size}.png`;
+  link.style.display = "block";
+  link.style.margin = "20px";
+  link.style.fontSize = "18px";
+  document.body.append(link);
+
+  const img = document.createElement("img");
+  img.src = link.href;
+  img.style.width = "96px";
+  img.style.margin = "10px 20px";
+  document.body.append(img);
+});
+</script>
+</body>
+</html>
