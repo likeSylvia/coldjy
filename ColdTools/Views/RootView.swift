@@ -16,37 +16,32 @@ struct RootView: View {
     var body: some View {
         ZStack {
             TabView(selection: $selectedTab) {
-                DashboardView(selectedTab: $selectedTab)
-                    .tabItem { Label("首页", systemImage: "house.fill") }
-                    .tag(AppTab.dashboard)
-
-                QuitSmokingView()
-                    .tabItem { Label("戒烟", systemImage: "nosign") }
-                    .tag(AppTab.smoking)
-
-                WaterView()
-                    .tabItem { Label("喝水", systemImage: "drop.fill") }
-                    .tag(AppTab.water)
-
-                RecordsView()
-                    .tabItem { Label("记录", systemImage: "list.bullet.rectangle") }
-                    .tag(AppTab.records)
-
-                SettingsView()
-                    .tabItem { Label("设置", systemImage: "gear") }
-                    .tag(AppTab.settings)
+                Tab("首页", systemImage: "house.fill", value: AppTab.dashboard) {
+                    DashboardView(selectedTab: $selectedTab)
+                }
+                Tab("戒烟", systemImage: "nosign", value: AppTab.smoking) {
+                    QuitSmokingView()
+                }
+                Tab("喝水", systemImage: "drop.fill", value: AppTab.water) {
+                    WaterView()
+                }
+                Tab("记录", systemImage: "list.bullet.rectangle", value: AppTab.records) {
+                    RecordsView()
+                }
+                Tab("设置", systemImage: "gearshape.fill", value: AppTab.settings) {
+                    SettingsView()
+                }
             }
             .onChange(of: selectedTab) { _, _ in Haptics.selection() }
 
             if lock.state == .locked {
                 LockScreen(lock: lock, settings: settings)
-                    .transition(.opacity)
+                    .transition(.opacity.combined(with: .scale(scale: 1.05)))
                     .zIndex(10)
             }
         }
         .environment(lock)
         .task {
-            // 确保存在默认设置
             let current = AppSettingsStore.current(in: context)
             lock.evaluateOnLaunch(settings: current)
             if current.waterRemindersEnabled {
@@ -62,7 +57,7 @@ struct RootView: View {
             @unknown default: break
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: lock.state)
+        .animation(.smooth(duration: 0.25), value: lock.state)
     }
 }
 

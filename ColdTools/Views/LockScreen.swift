@@ -7,6 +7,7 @@ struct LockScreen: View {
     @State private var passcodeInput: String = ""
     @State private var errorMessage: String?
     @State private var attemptingBiometric = false
+    @State private var shake = false
 
     private var showBio: Bool {
         (settings.lockMode == .biometric || settings.lockMode == .both) && LockStore.isBiometryAvailable
@@ -17,21 +18,35 @@ struct LockScreen: View {
 
     var body: some View {
         ZStack {
-            Color(.systemBackground).ignoresSafeArea()
+            // 背景用系统背景 + 渐变，符合 iOS 26 氛围
+            LinearGradient(
+                colors: [
+                    Color(.systemBackground),
+                    Color.accentColor.opacity(0.08)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
 
-            VStack(spacing: 24) {
+            VStack(spacing: 32) {
                 Spacer()
 
                 ZStack {
                     Circle()
-                        .fill(.tint.opacity(0.15))
-                        .frame(width: 96, height: 96)
+                        .fill(.tint.opacity(0.12))
+                        .frame(width: 120, height: 120)
+                        .blur(radius: 20)
+                    Circle()
+                        .frame(width: 100, height: 100)
+                        .glassEffect(.regular, in: .circle)
                     Image(systemName: "lock.fill")
                         .font(.system(size: 40, weight: .semibold))
                         .foregroundStyle(.tint)
+                        .symbolEffect(.pulse, options: .repeating, value: attemptingBiometric)
                 }
 
-                VStack(spacing: 8) {
+                VStack(spacing: 10) {
                     Text("已锁定")
                         .font(.largeTitle.bold())
                     Text(hintText)
@@ -44,12 +59,14 @@ struct LockScreen: View {
                     Text(errorMessage)
                         .font(.footnote)
                         .foregroundStyle(.red)
-                        .transition(.opacity)
+                        .offset(x: shake ? -8 : 0)
+                        .animation(.spring(duration: 0.3).repeatCount(3, autoreverses: true), value: shake)
+                        .transition(.scale.combined(with: .opacity))
                 }
 
                 Spacer()
 
-                VStack(spacing: 12) {
+                VStack(spacing: 14) {
                     if showBio {
                         Button {
                             Task { await runBiometric() }
@@ -57,9 +74,10 @@ struct LockScreen: View {
                             Label("使用 \(LockStore.biometryDisplayName)",
                                   systemImage: LockStore.biometryTypeAvailable() == .touchID ? "touchid" : "faceid")
                                 .font(.headline)
-                                .frame(maxWidth: .infinity, minHeight: 50)
+                                .frame(maxWidth: .infinity, minHeight: 52)
                         }
                         .buttonStyle(.borderedProminent)
+                        .buttonBorderShape(.capsule)
                         .controlSize(.large)
                         .disabled(attemptingBiometric)
                     }
@@ -68,19 +86,19 @@ struct LockScreen: View {
                         SecureField("访问密码", text: $passcodeInput)
                             .keyboardType(.numberPad)
                             .textContentType(.password)
-                            .padding(.horizontal, 16)
-                            .frame(height: 50)
-                            .background(Color(.secondarySystemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .padding(.horizontal, 20)
+                            .frame(height: 52)
+                            .glassEffect(.regular, in: .capsule)
 
                         Button {
                             submitPasscode()
                         } label: {
                             Text("解锁")
                                 .font(.headline)
-                                .frame(maxWidth: .infinity, minHeight: 50)
+                                .frame(maxWidth: .infinity, minHeight: 52)
                         }
                         .buttonStyle(.bordered)
+                        .buttonBorderShape(.capsule)
                         .controlSize(.large)
                         .disabled(passcodeInput.isEmpty)
                     }
@@ -121,6 +139,7 @@ struct LockScreen: View {
             Haptics.success()
         } else {
             Haptics.error()
+            shake.toggle()
             withAnimation { errorMessage = "密码不正确" }
         }
     }

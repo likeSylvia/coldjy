@@ -6,14 +6,13 @@ on:
     branches: [main]
     paths:
       - "ColdTools/**"
-      - "Scripts/**"
       - "project.yml"
       - ".github/workflows/build-ios.yml"
 
 jobs:
   build:
-    name: Build unsigned IPA on macOS
-    runs-on: macos-15
+    name: Build unsigned IPA on macOS 26
+    runs-on: macos-26
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       SCHEME: ColdTools
@@ -26,29 +25,16 @@ jobs:
 
       - name: Select Xcode
         run: |
-          # 优先选 SDK 预装好的 Xcode 版本 (macos-15 runner 上 16.2 最稳)
-          # 跳过 16.3+, 它们的 iOS SDK 常常没预装需要下载
-          CANDIDATES=(
-            "/Applications/Xcode_16.2.app"
-            "/Applications/Xcode_16.1.app"
-            "/Applications/Xcode_16.app"
-            "/Applications/Xcode.app"
-          )
-          for xc in "${CANDIDATES[@]}"; do
-            if [ -d "$xc" ]; then
-              # 检查 iOS SDK 是否真的装上了
-              SDK_PATH="$xc/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs"
-              if ls "$SDK_PATH"/iPhoneOS*.sdk 1>/dev/null 2>&1; then
-                sudo xcode-select -s "$xc"
-                echo "Selected: $xc"
-                break
-              else
-                echo "Skipped (no iOS SDK): $xc"
-              fi
-            fi
-          done
+          # macos-26 默认就是 Xcode 26.2, 用 26.4.1 更稳(有最新 iOS 26 SDK)
+          if [ -d "/Applications/Xcode_26.4.1.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_26.4.1.app
+          elif [ -d "/Applications/Xcode_26.3.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_26.3.app
+          elif [ -d "/Applications/Xcode_26.2.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_26.2.app
+          fi
           xcodebuild -version
-          xcodebuild -showsdks | grep -i iphoneos || true
+          xcodebuild -showsdks | grep -i iphoneos
 
       - name: Install XcodeGen
         run: |
@@ -59,7 +45,6 @@ jobs:
       - name: Generate Xcode project
         run: |
           xcodegen generate
-          echo "=== Generated project structure ==="
           ls -la ColdTools.xcodeproj/ || true
 
       - name: List schemes

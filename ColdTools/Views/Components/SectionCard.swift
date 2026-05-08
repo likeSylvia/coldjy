@@ -2,23 +2,19 @@ import SwiftUI
 
 struct SectionCard<Content: View>: View {
     let title: String
-    var trailing: AnyView? = nil
     @ViewBuilder var content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(title)
-                    .font(.headline)
-                Spacer()
-                trailing
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.5)
+
             content()
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color(.secondarySystemBackground))
-        )
+        .padding(18)
+        .glassEffect(.regular, in: .rect(cornerRadius: 22))
     }
 }

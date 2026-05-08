@@ -26,30 +26,27 @@ struct DashboardView: View {
 
     private var lastSmokeSeconds: Int? {
         guard let last = smokes.first else { return nil }
-        _ = tickerTick // trigger recomputation on state change
+        _ = tickerTick
         return max(0, Int(Date.now.timeIntervalSince(last.at)))
     }
 
-    private var reducedCount: Int {
-        max(settings.baselineCigs - todaySmokes.count, 0)
-    }
-
-    private var savedMoney: Double {
-        Double(reducedCount) * settings.pricePerStick
-    }
+    private var reducedCount: Int { max(settings.baselineCigs - todaySmokes.count, 0) }
+    private var savedMoney: Double { Double(reducedCount) * settings.pricePerStick }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     timerHero
                     quickActions
                     weekTrendCard
                     todayTimeline
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .padding(.vertical, 12)
             }
+            .scrollIndicators(.hidden)
+            .background(backgroundGradient)
             .navigationTitle("今天")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -66,11 +63,10 @@ struct DashboardView: View {
             .sheet(isPresented: $showTrigger) {
                 TriggerPickerSheet { trigger in
                     saveSmoke(trigger: trigger)
-                } onCancel: {
-                    // 取消不记录
-                }
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
+                } onCancel: {}
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
+                    .presentationBackground(.ultraThinMaterial)
             }
             .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
                 tickerTick &+= 1
@@ -78,21 +74,40 @@ struct DashboardView: View {
         }
     }
 
+    private var backgroundGradient: some View {
+        LinearGradient(
+            colors: [
+                Color(.systemBackground),
+                Color.accentColor.opacity(0.04)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+    }
+
     // MARK: - Timer Hero
 
     private var timerHero: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
+        HStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text("距上次吸烟")
-                    .font(.footnote)
+                    .font(.footnote.weight(.medium))
                     .foregroundStyle(.secondary)
                 Text(lastSmokeSeconds.map { Fmt.duration($0) } ?? "还没抽过")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.tint)
-                Text("比正常少 \(reducedCount) 根 · 省 \(Fmt.money(savedMoney))")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
+                Label {
+                    Text("比正常少 \(reducedCount) 根 · 省 \(Fmt.money(savedMoney))")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: "leaf.fill")
+                        .foregroundStyle(.green)
+                        .font(.caption)
+                }
             }
             Spacer()
             ProgressRing(
@@ -100,11 +115,9 @@ struct DashboardView: View {
                 label: "\(todaySmokes.count)/\(settings.targetCigs)"
             )
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(.secondarySystemBackground))
-        )
+        .padding(22)
+        .glassEffect(.regular, in: .rect(cornerRadius: 24))
+        .shadow(color: .black.opacity(0.08), radius: 16, y: 4)
     }
 
     // MARK: - Quick Actions
@@ -153,21 +166,27 @@ struct DashboardView: View {
                 ForEach(weekChartData) { item in
                     BarMark(
                         x: .value("日期", item.date, unit: .day),
-                        y: .value("根数", item.count)
+                        y: .value("根数", item.count),
+                        width: .ratio(0.55)
                     )
-                    .foregroundStyle(Calendar.current.isDateInToday(item.date) ? Color.accentColor : Color.accentColor.opacity(0.35))
-                    .cornerRadius(4)
+                    .foregroundStyle(
+                        Calendar.current.isDateInToday(item.date)
+                            ? Color.accentColor.gradient
+                            : Color.accentColor.opacity(0.35).gradient
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 }
             }
             .chartXAxis {
-                AxisMarks(values: .stride(by: .day)) { value in
+                AxisMarks(values: .stride(by: .day)) { _ in
                     AxisValueLabel(format: .dateTime.weekday(.narrow), centered: true)
+                        .font(.caption.weight(.medium))
                 }
             }
             .chartYAxis {
                 AxisMarks(position: .leading, values: .automatic(desiredCount: 3))
             }
-            .frame(height: 120)
+            .frame(height: 130)
         }
     }
 
@@ -178,7 +197,7 @@ struct DashboardView: View {
             let items = buildTodayTimeline()
             if items.isEmpty {
                 EmptyStateView(icon: "tray", text: "今天还没有记录")
-                    .padding(.vertical, 16)
+                    .padding(.vertical, 24)
             } else {
                 VStack(spacing: 0) {
                     ForEach(items) { item in
@@ -186,7 +205,7 @@ struct DashboardView: View {
                             deleteItem(id: id, kind: item.kind)
                         }
                         if item.id != items.last?.id {
-                            Divider()
+                            Divider().opacity(0.5)
                         }
                     }
                 }
@@ -268,18 +287,22 @@ private struct TimelineRow: View {
     let onDelete: (UUID) -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(item.tint.opacity(0.15))
-                    .frame(width: 36, height: 36)
+                    .fill(item.tint.gradient.opacity(0.15))
+                    .frame(width: 38, height: 38)
                 Image(systemName: item.icon)
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(item.tint)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(item.title).font(.subheadline)
+                Text(item.title)
+                    .font(.subheadline.weight(.medium))
                 Text(Fmt.timeOfDay(item.at))
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
             }
             Spacer()
         }
