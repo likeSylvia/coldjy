@@ -66,7 +66,7 @@ struct DashboardView: View {
     private var currentStreak: Int {
         let target = settings.targetCigs
         var streak = 0
-        for offset in (0 ... -60).reversed() where offset <= 0 {
+        for offset in stride(from: 0, through: -60, by: -1) {
             let d = DateKey.day(DateKey.daysAgo(offset))
             let count = smokes.filter { $0.dayKey == d }.count
             if offset == 0 && count == 0 && smokes.isEmpty { continue }

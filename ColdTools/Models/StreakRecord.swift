@@ -1,11 +1,10 @@
 import Foundation
 import SwiftData
 
-/// 用户第一次使用 App 的时间
 @Model
 final class UsageMarker {
-    var id: String = "primary"
-    var startedAt: Date = Date.now
+    var id: String
+    var startedAt: Date
 
     init(id: String = "primary", startedAt: Date = .now) {
         self.id = id

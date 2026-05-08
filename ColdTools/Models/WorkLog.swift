@@ -13,13 +13,13 @@ enum WorkStatus: String, CaseIterable, Identifiable, Codable {
 
 @Model
 final class WorkLog {
-    var id: UUID = UUID()
-    var createdAt: Date = Date.now
+    var id: UUID
+    var createdAt: Date
     var startAt: Date?
     var endAt: Date?
-    var statusRaw: String = "正常"
+    var statusRaw: String
     var hours: Double?
-    var note: String = ""
+    var note: String
 
     init(id: UUID = UUID(),
          createdAt: Date = .now,

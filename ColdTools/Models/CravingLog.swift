@@ -3,12 +3,12 @@ import SwiftData
 
 @Model
 final class CravingLog {
-    var id: UUID = UUID()
-    var at: Date = Date.now
-    var trigger: String = ""
-    var intensity: Int = 3
-    var resisted: Bool = true
-    var note: String = ""
+    var id: UUID
+    var at: Date
+    var trigger: String
+    var intensity: Int
+    var resisted: Bool
+    var note: String
 
     init(id: UUID = UUID(),
          at: Date = .now,

@@ -31,13 +31,13 @@ enum Energy: String, CaseIterable, Identifiable, Codable {
 
 @Model
 final class HealthLog {
-    var id: UUID = UUID()
-    var createdAt: Date = Date.now
+    var id: UUID
+    var createdAt: Date
     var weight: Double?
     var sleepHours: Double?
-    var moodRaw: String = "平稳"
-    var energyRaw: String = "普通"
-    var bodyNote: String = ""
+    var moodRaw: String
+    var energyRaw: String
+    var bodyNote: String
 
     init(id: UUID = UUID(),
          createdAt: Date = .now,

@@ -20,32 +20,46 @@ enum LockMode: String, CaseIterable, Identifiable, Codable {
 
 @Model
 final class AppSettings {
-    // Smoking
-    var baselineCigs: Int = 20
-    var targetCigs: Int = 12
-    var packPrice: Double = 25
-    var sticksPerPack: Int = 20
-    var quitPhase: String = "减量期"
+    var baselineCigs: Int
+    var targetCigs: Int
+    var packPrice: Double
+    var sticksPerPack: Int
+    var quitPhase: String
     var quitTargetDate: Date?
 
-    // Water
-    var waterGoalML: Int = 2000
-    var waterStartHour: Int = 9
-    var waterEndHour: Int = 22
-    var waterIntervalMin: Int = 90
-    var waterRemindersEnabled: Bool = false
+    var waterGoalML: Int
+    var waterStartHour: Int
+    var waterEndHour: Int
+    var waterIntervalMin: Int
+    var waterRemindersEnabled: Bool
 
-    // Lock
-    var lockModeRaw: String = "off"
-    var passcodeHash: String?   // sha256 hex
-    var passcodeSalt: String?   // random bytes hex
+    var lockModeRaw: String
+    var passcodeHash: String?
+    var passcodeSalt: String?
 
-    // UI
-    var useSystemAppearance: Bool = true
-    var forceDarkMode: Bool = false
-    var themeRaw: String = "warmAmber"
+    var useSystemAppearance: Bool
+    var forceDarkMode: Bool
+    var themeRaw: String
 
-    init() {}
+    init() {
+        self.baselineCigs = 20
+        self.targetCigs = 12
+        self.packPrice = 25
+        self.sticksPerPack = 20
+        self.quitPhase = "减量期"
+        self.quitTargetDate = nil
+        self.waterGoalML = 2000
+        self.waterStartHour = 9
+        self.waterEndHour = 22
+        self.waterIntervalMin = 90
+        self.waterRemindersEnabled = false
+        self.lockModeRaw = "off"
+        self.passcodeHash = nil
+        self.passcodeSalt = nil
+        self.useSystemAppearance = true
+        self.forceDarkMode = false
+        self.themeRaw = "warmAmber"
+    }
 
     var lockMode: LockMode {
         LockMode(rawValue: lockModeRaw) ?? .off
@@ -59,8 +73,8 @@ final class AppSettings {
 
 @Model
 final class UnlockedAchievement {
-    var code: String = ""
-    var unlockedAt: Date = Date.now
+    var code: String
+    var unlockedAt: Date
 
     init(code: String, unlockedAt: Date = .now) {
         self.code = code

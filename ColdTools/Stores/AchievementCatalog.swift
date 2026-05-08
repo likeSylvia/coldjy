@@ -31,10 +31,9 @@ struct AchievementContext {
     var currentStreak: Int {
         let target = settings.targetCigs
         var streak = 0
-        for offset in (0 ... -60).reversed() where offset <= 0 {
+        for offset in stride(from: 0, through: -60, by: -1) {
             let d = DateKey.day(DateKey.daysAgo(offset))
             let count = allSmokes.filter { $0.dayKey == d }.count
-            // 今天允许还没抽够
             if offset == 0 && count == 0 && allSmokes.isEmpty { continue }
             if count <= target { streak += 1 } else { break }
         }
@@ -57,7 +56,7 @@ struct AchievementContext {
 
     var waterStreak: Int {
         var streak = 0
-        for offset in (0 ... -60).reversed() where offset <= 0 {
+        for offset in stride(from: 0, through: -60, by: -1) {
             let d = DateKey.day(DateKey.daysAgo(offset))
             let amount = allWaters.filter { $0.dayKey == d }.reduce(0) { $0 + $1.amount }
             if offset == 0 && amount == 0 { continue }
@@ -68,7 +67,7 @@ struct AchievementContext {
 
     var consecutiveLogDays: Int {
         var streak = 0
-        for offset in (0 ... -60).reversed() where offset <= 0 {
+        for offset in stride(from: 0, through: -60, by: -1) {
             let d = DateKey.day(DateKey.daysAgo(offset))
             let hasAny = allSmokes.contains { $0.dayKey == d }
                 || allCravings.contains { $0.dayKey == d }

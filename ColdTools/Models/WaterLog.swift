@@ -3,9 +3,9 @@ import SwiftData
 
 @Model
 final class WaterLog {
-    var id: UUID = UUID()
-    var at: Date = Date.now
-    var amount: Int = 250
+    var id: UUID
+    var at: Date
+    var amount: Int
 
     init(id: UUID = UUID(), at: Date = .now, amount: Int = 250) {
         self.id = id
